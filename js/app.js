@@ -66,23 +66,20 @@ const tractionEl = document.getElementById('traction');
 const trainNumberEl = document.getElementById('trainNumber');
 const routeEl = document.getElementById('route');
 
-const addTractionBtn = document.getElementById('addTractionBtn');
 const tractionList = document.getElementById('tractionList');
-
-const addConductorBtn = document.getElementById('addConductorBtn');
 const conductorList = document.getElementById('conductorList');
-
-const addOrderBtn = document.getElementById('addOrderBtn');
 const ordersList = document.getElementById('ordersList');
-
-const addStationBtn = document.getElementById('addStationBtn');
 const stationsList = document.getElementById('stationsList');
-
-const addControlBtn = document.getElementById('addControlBtn');
 const controlsList = document.getElementById('controlsList');
-
-const addNoteBtn = document.getElementById('addNoteBtn');
 const notesList = document.getElementById('notesList');
+
+/* Modal forms */
+const formTraction = document.getElementById('formTraction');
+const formConductor = document.getElementById('formConductor');
+const formOrder = document.getElementById('formOrder');
+const formStation = document.getElementById('formStation');
+const formControl = document.getElementById('formControl');
+const formNote = document.getElementById('formNote');
 
 let currentReport = null;
 let currentUser = null;
@@ -179,7 +176,7 @@ function renderTractionRow(item, idx) {
   div.className = 'd-flex justify-content-between align-items-center station-row';
   div.innerHTML = `
     <div>
-      <strong>${item.name}</strong> (${item.id}) - ZDP: ${item.zdp} - Lok: ${item.loco} [${item.from} → ${item.to}]
+      <strong>${item.name}</strong> (${item.id}) - ZDP: ${item.zdp} - Lok: ${item.loco || '-'} [${item.from || '-'} → ${item.to || '-'}]
     </div>
     <div>
       <button class="btn btn-sm btn-outline-danger btn-del" data-idx="${idx}">Usuń</button>
@@ -190,16 +187,23 @@ function renderTractionRow(item, idx) {
   });
   return div;
 }
-addTractionBtn.addEventListener('click', async () => {
-  const name = prompt('Imię i nazwisko pracownika:');
-  if (!name) return;
-  const id = prompt('Numer służbowy:');
-  if (!id) return;
-  const zdp = prompt('ZDP (WAW, KRK, GDY, POZ):');
-  const loco = prompt('Oznaczenie lokomotywy:');
-  const from = prompt('Stacja od:');
-  const to = prompt('Stacja do:');
+
+/* Formularz Traction */
+formTraction.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = document.getElementById('t_name').value.trim();
+  const id = document.getElementById('t_id').value.trim();
+  const zdp = document.getElementById('t_zdp').value;
+  const loco = document.getElementById('t_loco').value.trim();
+  const from = document.getElementById('t_from').value.trim();
+  const to = document.getElementById('t_to').value.trim();
+  if (!name || !id) return alert('Imię i numer są wymagane.');
   currentReport.sectionB.push({ name, id, zdp, loco, from, to });
+  // reset form
+  formTraction.reset();
+  // close modal
+  const modal = bootstrap.Modal.getInstance(document.getElementById('modalTraction'));
+  modal.hide();
   await saveAndRender();
 });
 
@@ -220,14 +224,19 @@ function renderConductorRow(item, idx) {
   });
   return div;
 }
-addConductorBtn.addEventListener('click', async () => {
-  const name = prompt('Imię i nazwisko konduktora:');
-  if (!name) return;
-  const id = prompt('Numer służbowy:');
-  if (!id) return;
-  const zdp = prompt('ZDP (WAW, KRK, GDY, POZ):');
-  const role = prompt('Funkcja (KP, S, B, K):');
+
+/* Formularz Conductor */
+formConductor.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = document.getElementById('c_name').value.trim();
+  const id = document.getElementById('c_id').value.trim();
+  const zdp = document.getElementById('c_zdp').value;
+  const role = document.getElementById('c_role').value;
+  if (!name || !id) return alert('Imię i numer są wymagane.');
   currentReport.sectionC.push({ name, id, zdp, role });
+  formConductor.reset();
+  const modal = bootstrap.Modal.getInstance(document.getElementById('modalConductor'));
+  modal.hide();
   await saveAndRender();
 });
 
@@ -248,11 +257,17 @@ function renderOrderRow(item, idx) {
   });
   return div;
 }
-addOrderBtn.addEventListener('click', async () => {
-  const text = prompt('Treść dyspozycji:');
-  if (!text) return;
-  const source = prompt('Źródło (Dyspozytura, PKP PLK, Inne):','Dyspozytura');
+
+/* Formularz Order */
+formOrder.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const text = document.getElementById('o_text').value.trim();
+  const source = document.getElementById('o_source').value;
+  if (!text) return alert('Treść dyspozycji jest wymagana.');
   currentReport.sectionD.push({ text, source });
+  formOrder.reset();
+  const modal = bootstrap.Modal.getInstance(document.getElementById('modalOrder'));
+  modal.hide();
   await saveAndRender();
 });
 
@@ -280,13 +295,18 @@ function renderStationRow(item, idx) {
   });
   return div;
 }
-addStationBtn.addEventListener('click', async () => {
-  const station = prompt('Nazwa stacji:');
-  if (!station) return;
-  const planArr = prompt('Planowy przyjazd (HH:MM):','');
-  const planDep = prompt('Planowy odjazd (HH:MM):','');
-  const realArr = prompt('Realny przyjazd (HH:MM):','');
-  const realDep = prompt('Realny odjazd (HH:MM):','');
+
+/* Formularz Station */
+formStation.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const station = document.getElementById('s_station').value.trim();
+  const planArr = document.getElementById('s_planArr').value.trim();
+  const planDep = document.getElementById('s_planDep').value.trim();
+  const realArr = document.getElementById('s_realArr').value.trim();
+  const realDep = document.getElementById('s_realDep').value.trim();
+  const delayReason = document.getElementById('s_delayReason').value.trim();
+  const writtenOrders = document.getElementById('s_writtenOrders').value.trim();
+  if (!station) return alert('Nazwa stacji jest wymagana.');
   const planArrMin = timeToMinutes(planArr);
   const realArrMin = timeToMinutes(realArr);
   let delayMinutes = null;
@@ -294,12 +314,13 @@ addStationBtn.addEventListener('click', async () => {
   const realDepMin = timeToMinutes(realDep);
   let realStopMinutes = null;
   if (realArrMin != null && realDepMin != null) realStopMinutes = realDepMin - realArrMin;
-  const delayReason = prompt('Powód opóźnienia (jeśli wystąpił):','');
-  const writtenOrders = prompt('Otrzymane rozkazy pisemne (jeśli wystąpiły):','');
   currentReport.sectionE.push({
     station, planArr, planDep, realArr, realDep,
     delayMinutes, realStopMinutes, delayReason, writtenOrders
   });
+  formStation.reset();
+  const modal = bootstrap.Modal.getInstance(document.getElementById('modalStation'));
+  modal.hide();
   await saveAndRender();
 });
 
@@ -309,7 +330,7 @@ function renderControlRow(item, idx) {
   div.className = 'station-row d-flex justify-content-between align-items-center';
   div.innerHTML = `
     <div>
-      <strong>${item.by}</strong> (${item.id})<div class="small text-muted">${item.desc}</div><div class="small text-muted">Uwagi: ${item.notes || '-'}</div>
+      <strong>${item.by}</strong> (${item.id || '-'})<div class="small text-muted">${item.desc || '-'}</div><div class="small text-muted">Uwagi: ${item.notes || '-'}</div>
     </div>
     <div>
       <button class="btn btn-sm btn-outline-danger btn-del" data-idx="${idx}">Usuń</button>
@@ -320,13 +341,19 @@ function renderControlRow(item, idx) {
   });
   return div;
 }
-addControlBtn.addEventListener('click', async () => {
-  const by = prompt('Imię i nazwisko kontrolującego:');
-  if (!by) return;
-  const id = prompt('Numer służbowy kontrolującego:');
-  const desc = prompt('Opis przeprowadzonej kontroli:','');
-  const notes = prompt('Uwagi:','');
+
+/* Formularz Control */
+formControl.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const by = document.getElementById('f_by').value.trim();
+  const id = document.getElementById('f_id').value.trim();
+  const desc = document.getElementById('f_desc').value.trim();
+  const notes = document.getElementById('f_notes').value.trim();
+  if (!by) return alert('Imię i nazwisko kontrolującego jest wymagane.');
   currentReport.sectionF.push({ by, id, desc, notes });
+  formControl.reset();
+  const modal = bootstrap.Modal.getInstance(document.getElementById('modalControl'));
+  modal.hide();
   await saveAndRender();
 });
 
@@ -343,10 +370,16 @@ function renderNoteRow(item, idx) {
   });
   return div;
 }
-addNoteBtn.addEventListener('click', async () => {
-  const text = prompt('Uwagi kierownika pociągu:');
-  if (!text) return;
+
+/* Formularz Note */
+formNote.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const text = document.getElementById('n_text').value.trim();
+  if (!text) return alert('Treść uwagi jest wymagana.');
   currentReport.sectionG.push({ text });
+  formNote.reset();
+  const modal = bootstrap.Modal.getInstance(document.getElementById('modalNote'));
+  modal.hide();
   await saveAndRender();
 });
 
