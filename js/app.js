@@ -1,5 +1,5 @@
 // app.js
-import { saveReport, getReport, nextCounter, listReports } from './db.js';
+import { saveReport, getReport, nextCounter } from './db.js';
 import { exportPdf } from './pdf.js';
 
 /* ---------- Helpery ---------- */
@@ -17,14 +17,12 @@ function nowDateString() {
   return `${DD}/${MM}/${YYYY}`;
 }
 function timeToMinutes(t) {
-  // t format HH:MM
   if (!t) return null;
-  const [h,m] = t.split(':').map(Number);
+  const parts = t.split(':');
+  if (parts.length !== 2) return null;
+  const [h,m] = parts.map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return null;
   return h*60 + m;
-}
-function minutesDiff(minA, minB) {
-  if (minA==null || minB==null) return null;
-  return minA - minB;
 }
 
 /* ---------- Model raportu ---------- */
@@ -36,12 +34,12 @@ function createEmptyReport(number, user) {
     createdBy: user,
     currentDriver: user,
     sectionA: { category:'', traction:'', trainNumber:'', route:'' },
-    sectionB: [], // traction crew
-    sectionC: [], // conductor crew
-    sectionD: [], // orders
-    sectionE: [], // stations
-    sectionF: [], // controls
-    sectionG: [], // notes
+    sectionB: [],
+    sectionC: [],
+    sectionD: [],
+    sectionE: [],
+    sectionF: [],
+    sectionG: [],
     history: []
   };
 }
@@ -114,7 +112,6 @@ takeReportBtn.addEventListener('click', async () => {
   if (!num) return;
   const rep = await getReport(num.trim());
   if (!rep) return alert('Nie znaleziono raportu o podanym numerze.');
-  // dodaj historię przejęcia
   rep.history = rep.history || [];
   rep.history.push({ action: 'przejecie', by: currentUser, at: new Date().toISOString() });
   rep.currentDriver = currentUser;
@@ -290,7 +287,6 @@ addStationBtn.addEventListener('click', async () => {
   const planDep = prompt('Planowy odjazd (HH:MM):','');
   const realArr = prompt('Realny przyjazd (HH:MM):','');
   const realDep = prompt('Realny odjazd (HH:MM):','');
-  // obliczenia
   const planArrMin = timeToMinutes(planArr);
   const realArrMin = timeToMinutes(realArr);
   let delayMinutes = null;
@@ -357,7 +353,6 @@ addNoteBtn.addEventListener('click', async () => {
 /* ---------- Save & render helper ---------- */
 async function saveAndRender() {
   currentReport.lastEditedAt = new Date().toISOString();
-  // update section A from inputs
   currentReport.sectionA = {
     category: catEl.value,
     traction: tractionEl.value,
@@ -396,7 +391,6 @@ importFile.addEventListener('change', async (e) => {
   try {
     const rep = JSON.parse(text);
     if (!rep.number) throw new Error('Nieprawidłowy plik');
-    // nadpisz aktualny raport
     currentReport = rep;
     await saveReport(currentReport);
     renderReport();
@@ -406,19 +400,140 @@ importFile.addEventListener('change', async (e) => {
   }
 });
 
-/* ---------- PDF ---------- */
+/* ---------- PDF (czysty widok do druku) ---------- */
 previewPdfBtn.addEventListener('click', async () => {
-  // przygotuj widok do PDF: sklonuj panel raportu i dodaj stopkę
-  const el = document.querySelector('#reportPanel .card').cloneNode(true);
-  // dodaj stopkę
+  const container = document.createElement('div');
+  container.className = 'print-container';
+
+  const header = document.createElement('div');
+  header.className = 'print-header';
+  header.innerHTML = `
+    <div class="print-title">Raport z jazdy pociągu</div>
+    <div class="print-meta">Numer: ${currentReport.number} · Prowadzący: ${currentReport.currentDriver.name} (${currentReport.currentDriver.id})</div>
+    <div class="print-meta">Wygenerowano dnia ${nowDateString()}</div>
+  `;
+  container.appendChild(header);
+
+  const secA = document.createElement('div');
+  secA.className = 'section';
+  secA.innerHTML = `<h6>A - Dane ogólne</h6>
+    <table class="table-print">
+      <tbody>
+        <tr><th>Kategoria</th><td>${currentReport.sectionA.category || '-'}</td></tr>
+        <tr><th>Trakcja</th><td>${currentReport.sectionA.traction || '-'}</td></tr>
+        <tr><th>Numer pociągu</th><td>${currentReport.sectionA.trainNumber || '-'}</td></tr>
+        <tr><th>Relacja</th><td>${currentReport.sectionA.route || '-'}</td></tr>
+      </tbody>
+    </table>`;
+  container.appendChild(secA);
+
+  const makeCrewTable = (title, arr, cols) => {
+    const s = document.createElement('div');
+    s.className = 'section';
+    s.innerHTML = `<h6>${title}</h6>`;
+    const table = document.createElement('table');
+    table.className = 'table-print';
+    const thead = document.createElement('thead');
+    thead.innerHTML = `<tr>${cols.map(c => `<th>${c}</th>`).join('')}</tr>`;
+    table.appendChild(thead);
+    const tbody = document.createElement('tbody');
+    if (arr.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="${cols.length}">-</td></tr>`;
+    } else {
+      arr.forEach(it => {
+        const cells = cols.map(k => `<td>${(it[k] !== undefined ? it[k] : (it[k.toLowerCase()] || '-'))}</td>`).join('');
+        tbody.innerHTML += `<tr>${cells}</tr>`;
+      });
+    }
+    table.appendChild(tbody);
+    s.appendChild(table);
+    return s;
+  };
+
+  container.appendChild(makeCrewTable('B - Drużyna trakcyjna', currentReport.sectionB, ['name','id','zdp','loco','from','to']));
+  container.appendChild(makeCrewTable('C - Drużyna konduktorska', currentReport.sectionC, ['name','id','zdp','role']));
+
+  const secD = document.createElement('div');
+  secD.className = 'section';
+  secD.innerHTML = `<h6>D - Dyspozycje</h6>`;
+  if (currentReport.sectionD.length === 0) {
+    secD.innerHTML += `<div>-</div>`;
+  } else {
+    const ul = document.createElement('ol');
+    currentReport.sectionD.forEach(o => {
+      const li = document.createElement('li');
+      li.innerHTML = `<strong>${o.source}</strong>: ${o.text}`;
+      ul.appendChild(li);
+    });
+    secD.appendChild(ul);
+  }
+  container.appendChild(secD);
+
+  const secE = document.createElement('div');
+  secE.className = 'section';
+  secE.innerHTML = `<h6>E - Dane o jeździe pociągu</h6>`;
+  const tableE = document.createElement('table');
+  tableE.className = 'table-print';
+  tableE.innerHTML = `
+    <thead>
+      <tr>
+        <th>Stacja</th>
+        <th>Plan przyjazd</th>
+        <th>Plan odjazd</th>
+        <th>Real przyjazd</th>
+        <th>Real odjazd</th>
+        <th>Opóźnienie (min)</th>
+        <th>Postój realny (min)</th>
+        <th>Powód / Rozkazy</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${currentReport.sectionE.length === 0 ? `<tr><td colspan="8">-</td></tr>` : currentReport.sectionE.map(s => `
+        <tr>
+          <td>${s.station || '-'}</td>
+          <td>${s.planArr || '-'}</td>
+          <td>${s.planDep || '-'}</td>
+          <td>${s.realArr || '-'}</td>
+          <td>${s.realDep || '-'}</td>
+          <td>${s.delayMinutes != null ? s.delayMinutes : '-'}</td>
+          <td>${s.realStopMinutes != null ? s.realStopMinutes : '-'}</td>
+          <td>${(s.delayReason || '-') + (s.writtenOrders ? ' / ' + s.writtenOrders : '')}</td>
+        </tr>`).join('')}
+    </tbody>`;
+  secE.appendChild(tableE);
+  container.appendChild(secE);
+
+  const secF = document.createElement('div');
+  secF.className = 'section';
+  secF.innerHTML = `<h6>F - Kontrola pociągu</h6>`;
+  if (currentReport.sectionF.length === 0) secF.innerHTML += `<div>-</div>`;
+  else {
+    const t = document.createElement('table'); t.className='table-print';
+    t.innerHTML = `<thead><tr><th>Kontrolujący</th><th>Numer</th><th>Opis</th><th>Uwagi</th></tr></thead><tbody>${
+      currentReport.sectionF.map(c => `<tr><td>${c.by}</td><td>${c.id}</td><td>${c.desc || '-'}</td><td>${c.notes || '-'}</td></tr>`).join('')
+    }</tbody>`;
+    secF.appendChild(t);
+  }
+  container.appendChild(secF);
+
+  const secG = document.createElement('div');
+  secG.className = 'section';
+  secG.innerHTML = `<h6>G - Uwagi kierownika pociągu</h6>`;
+  if (currentReport.sectionG.length === 0) secG.innerHTML += `<div>-</div>`;
+  else {
+    const ul = document.createElement('ul');
+    currentReport.sectionG.forEach(n => { const li = document.createElement('li'); li.textContent = n.text; ul.appendChild(li); });
+    secG.appendChild(ul);
+  }
+  container.appendChild(secG);
+
   const footer = document.createElement('div');
-  footer.style.marginTop = '12px';
-  footer.style.fontSize = '0.9rem';
+  footer.className = 'print-footer';
   footer.textContent = `Wygenerowano dnia ${nowDateString()} z systemu ERJ`;
-  el.appendChild(footer);
-  // filename
+  container.appendChild(footer);
+
   const filename = `${currentReport.number.replace(/\//g,'-')}.pdf`;
-  await exportPdf(el, filename);
+  await exportPdf(container, filename);
 });
 
 /* ---------- Zamknij raport (powrót) ---------- */
@@ -432,5 +547,5 @@ closeReportBtn.addEventListener('click', () => {
 
 /* ---------- Inicjalizacja ---------- */
 (async function init() {
-  // nic specjalnego na start
+  // gotowe do użycia
 })();
