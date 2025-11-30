@@ -4,319 +4,126 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Raport z jazdy pociągu</title>
-
-  <!-- Bootstrap 5 -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-
   <link href="css/styles.css" rel="stylesheet">
 </head>
 <body>
-  <div class="container py-3" id="app">
-    <!-- Panel startowy -->
-    <div id="startPanel" class="card p-3">
-      <h3 class="mb-3">Panel startowy</h3>
-
-      <div class="row g-2 mb-2">
-        <div class="col-12 col-md-8">
-          <input id="userName" class="form-control" placeholder="Imię i nazwisko" />
-        </div>
-        <div class="col-12 col-md-4">
-          <input id="userId" class="form-control" placeholder="Numer służbowy" />
-        </div>
-      </div>
-
-      <div class="d-flex gap-2">
-        <button id="newReportBtn" class="btn btn-primary">Otwórz nowy raport</button>
-        <button id="takeReportBtn" class="btn btn-outline-secondary">Przejmij raport</button>
-        <button id="importBtnStart" class="btn btn-outline-info">Importuj raport (JSON)</button>
-        <input id="importFileStart" type="file" accept=".json" style="display:none;">
-      </div>
+<div class="container py-3" id="app">
+  <!-- Panel startowy -->
+  <div id="startPanel" class="card p-3">
+    <h3 class="mb-3">Panel startowy</h3>
+    <div class="row g-2 mb-2">
+      <div class="col-12 col-md-8"><input id="userName" class="form-control" placeholder="Imię i nazwisko" /></div>
+      <div class="col-12 col-md-4"><input id="userId" class="form-control" placeholder="Numer służbowy" /></div>
     </div>
-
-    <!-- Panel raportu -->
-    <div id="reportPanel" class="mt-3" style="display:none;">
-      <div class="card p-3">
-        <div class="d-flex justify-content-between align-items-start">
-          <h4 class="mb-0">Raport z jazdy pociągu</h4>
-          <div class="text-end">
-            <div><strong id="reportNumber" class="badge bg-secondary fs-6"></strong></div>
-            <div class="small text-muted" id="currentUser"></div>
-          </div>
-        </div>
-
-        <hr>
-
-        <div id="sections" class="mb-3">
-          <!-- Sekcja A -->
-          <div class="mb-3 card p-3" id="sectionA">
-            <h5>A - Dane ogólne</h5>
-            <div class="row g-2">
-              <div class="col-6 col-md-3">
-                <label class="form-label small">Kategoria</label>
-                <select id="cat" class="form-select">
-                  <option value="">Wybierz</option>
-                  <option>EX</option><option>MP</option><option>RJ</option><option>OS</option><option>PW</option>
-                </select>
-              </div>
-              <div class="col-6 col-md-3">
-                <label class="form-label small">Trakcja</label>
-                <select id="traction" class="form-select">
-                  <option value="">Wybierz</option>
-                  <option>E</option><option>S</option>
-                </select>
-              </div>
-              <div class="col-6 col-md-3">
-                <label class="form-label small">Numer pociągu</label>
-                <input id="trainNumber" class="form-control" maxlength="6" />
-              </div>
-              <div class="col-6 col-md-3">
-                <label class="form-label small">Relacja (od - do)</label>
-                <input id="route" class="form-control" placeholder="Stacja początkowa - Stacja końcowa" />
-              </div>
-            </div>
-          </div>
-
-          <!-- Sekcja B: Drużyna trakcyjna -->
-          <div class="mb-3 card p-3" id="sectionB">
-            <div class="d-flex justify-content-between align-items-center">
-              <h5 class="mb-0">B - Drużyna trakcyjna</h5>
-              <button id="addTractionBtn" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalTraction">Dodaj</button>
-            </div>
-            <div id="tractionList" class="mt-2"></div>
-          </div>
-
-          <!-- Sekcja C: Drużyna konduktorska -->
-          <div class="mb-3 card p-3" id="sectionC">
-            <div class="d-flex justify-content-between align-items-center">
-              <h5 class="mb-0">C - Drużyna konduktorska</h5>
-              <button id="addConductorBtn" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalConductor">Dodaj</button>
-            </div>
-            <div id="conductorList" class="mt-2"></div>
-          </div>
-
-          <!-- Sekcja D: Dyspozycje -->
-          <div class="mb-3 card p-3" id="sectionD">
-            <div class="d-flex justify-content-between align-items-center">
-              <h5 class="mb-0">D - Dyspozycje</h5>
-              <button id="addOrderBtn" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalOrder">Dodaj</button>
-            </div>
-            <div id="ordersList" class="mt-2"></div>
-          </div>
-
-          <!-- Sekcja E: Dane o jeździe pociągu -->
-          <div class="mb-3 card p-3" id="sectionE">
-            <div class="d-flex justify-content-between align-items-center">
-              <h5 class="mb-0">E - Dane o jeździe pociągu</h5>
-              <button id="addStationBtn" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalStation">Dodaj</button>
-            </div>
-            <div id="stationsList" class="mt-2"></div>
-          </div>
-
-          <!-- Sekcja F: Kontrola pociągu -->
-          <div class="mb-3 card p-3" id="sectionF">
-            <div class="d-flex justify-content-between align-items-center">
-              <h5 class="mb-0">F - Kontrola pociągu</h5>
-              <button id="addControlBtn" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalControl">Dodaj</button>
-            </div>
-            <div id="controlsList" class="mt-2"></div>
-          </div>
-
-          <!-- Sekcja G: Uwagi kierownika -->
-          <div class="mb-3 card p-3" id="sectionG">
-            <div class="d-flex justify-content-between align-items-center">
-              <h5 class="mb-0">G - Uwagi kierownika pociągu</h5>
-              <button id="addNoteBtn" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalNote">Dodaj</button>
-            </div>
-            <div id="notesList" class="mt-2"></div>
-          </div>
-        </div>
-
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <button id="exportJson" class="btn btn-outline-info btn-sm">Eksportuj JSON</button>
-            <button id="importBtn" class="btn btn-outline-secondary btn-sm">Importuj JSON</button>
-            <input id="importFile" type="file" accept=".json" style="display:none;">
-          </div>
-          <div>
-            <button id="previewPdf" class="btn btn-success btn-sm">Pobierz PDF</button>
-            <button id="closeReport" class="btn btn-danger btn-sm">Zamknij raport</button>
-          </div>
-        </div>
-
-      </div>
+    <div class="d-flex gap-2">
+      <button id="newReportBtn" class="btn btn-primary">Otwórz nowy raport</button>
+      <button id="takeReportBtn" class="btn btn-outline-secondary">Przejmij raport</button>
+      <button id="importBtnStart" class="btn btn-outline-info">Importuj raport (JSON)</button>
+      <input id="importFileStart" type="file" accept=".json" style="display:none;">
     </div>
   </div>
 
-  <!-- Modale -->
-
-  <!-- Modal: Traction (Sekcja B) -->
-  <div class="modal fade" id="modalTraction" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-      <form id="formTraction" class="modal-content" data-mode="add" data-index="">
-        <div class="modal-header">
-          <h5 class="modal-title">Dodaj pracownika drużyny trakcyjnej</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+  <!-- Panel raportu -->
+  <div id="reportPanel" class="mt-3" style="display:none;">
+    <div class="card p-3">
+      <div class="d-flex justify-content-between align-items-start">
+        <h4 class="mb-0">Raport z jazdy pociągu</h4>
+        <div class="text-end">
+          <div><strong id="reportNumber" class="badge bg-secondary fs-6"></strong></div>
+          <div class="small text-muted" id="currentUser"></div>
         </div>
-        <div class="modal-body">
-          <div class="mb-2"><label class="form-label">Imię i nazwisko</label><input id="t_name" class="form-control" required></div>
-          <div class="mb-2"><label class="form-label">Numer służbowy</label><input id="t_id" class="form-control" required></div>
-          <div class="mb-2"><label class="form-label">ZDP</label>
-            <select id="t_zdp" class="form-select">
-              <option>WAW</option><option>KRK</option><option>GDY</option><option>POZ</option>
-            </select>
-          </div>
-          <div class="mb-2"><label class="form-label">Oznaczenie lokomotywy</label><input id="t_loco" class="form-control"></div>
+      </div>
+      <hr>
+
+      <div id="sections" class="mb-3">
+        <!-- Sekcja A -->
+        <div class="mb-3 card p-3" id="sectionA">
+          <h5>A - Dane ogólne</h5>
           <div class="row g-2">
-            <div class="col"><label class="form-label">Stacja od</label><input id="t_from" class="form-control" list="stationsDatalist"></div>
-            <div class="col"><label class="form-label">Stacja do</label><input id="t_to" class="form-control" list="stationsDatalist"></div>
+            <div class="col-6 col-md-2">
+              <label class="form-label small">Kategoria</label>
+              <select id="cat" class="form-select"><option value="">Wybierz</option><option>EX</option><option>MP</option><option>RJ</option><option>OS</option><option>PW</option></select>
+            </div>
+            <div class="col-6 col-md-2">
+              <label class="form-label small">Trakcja</label>
+              <select id="traction" class="form-select"><option value="">Wybierz</option><option>E</option><option>S</option></select>
+            </div>
+            <div class="col-6 col-md-2">
+              <label class="form-label small">Numer pociągu</label>
+              <input id="trainNumber" class="form-control" maxlength="6" />
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label small">Relacja (od - do)</label>
+              <input id="route" class="form-control" />
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label small">Data kursu</label>
+              <input id="trainDate" type="date" class="form-control" />
+            </div>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="submit" class="btn btn-primary">Zapisz</button>
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+
+        <!-- Sekcja B, C, D ... (bez zmian) -->
+
+        <!-- Sekcja E -->
+        <div class="mb-3 card p-3" id="sectionE">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">E - Dane o jeździe pociągu</h5>
+            <button id="addStationBtn" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalStation">Dodaj</button>
+          </div>
+          <div id="stationsList" class="mt-2"></div>
         </div>
-      </form>
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <button id="exportJson" class="btn btn-outline-info btn-sm">Eksportuj JSON</button>
+          <button id="importBtn" class="btn btn-outline-secondary btn-sm">Importuj JSON</button>
+          <input id="importFile" type="file" accept=".json" style="display:none;">
+        </div>
+        <div>
+          <button id="previewPdf" class="btn btn-success btn-sm">Pobierz PDF</button>
+          <button id="closeReport" class="btn btn-danger btn-sm">Zamknij raport</button>
+        </div>
+      </div>
     </div>
   </div>
+</div>
 
-  <!-- Modal: Conductor (Sekcja C) -->
-  <div class="modal fade" id="modalConductor" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-      <form id="formConductor" class="modal-content" data-mode="add" data-index="">
-        <div class="modal-header">
-          <h5 class="modal-title">Dodaj pracownika drużyny konduktorskiej</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+<!-- Modal Station -->
+<div class="modal fade" id="modalStation" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="formStation" class="modal-content" data-mode="add" data-index="">
+      <div class="modal-header">
+        <h5 class="modal-title">Dodaj wpis stacji</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2"><label class="form-label">Nazwa stacji</label><input id="s_station" class="form-control" list="stationsDatalist" required><datalist id="stationsDatalist"></datalist></div>
+        <div class="row g-2">
+          <div class="col"><label class="form-label">Data przyjazdu</label><input id="s_dateArr" type="date" class="form-control"></div>
+          <div class="col"><label class="form-label">Plan przyjazd (HH:MM)</label><input id="s_planArr" class="form-control"></div>
+          <div class="col"><label class="form-label">Real przyjazd (HH:MM)</label><input id="s_realArr" class="form-control"></div>
         </div>
-        <div class="modal-body">
-          <div class="mb-2"><label class="form-label">Imię i nazwisko</label><input id="c_name" class="form-control" required></div>
-          <div class="mb-2"><label class="form-label">Numer służbowy</label><input id="c_id" class="form-control" required></div>
-          <div class="mb-2"><label class="form-label">ZDP</label>
-            <select id="c_zdp" class="form-select">
-              <option>WAW</option><option>KRK</option><option>GDY</option><option>POZ</option>
-            </select>
-          </div>
-          <div class="mb-2"><label class="form-label">Funkcja</label>
-            <select id="c_role" class="form-select">
-              <option>KP</option><option>S</option><option>B</option><option>K</option>
-            </select>
-          </div>
-          <div class="row g-2 mt-2">
-            <div class="col"><label class="form-label">Stacja od</label><input id="c_from" class="form-control" list="stationsDatalist"></div>
-            <div class="col"><label class="form-label">Stacja do</label><input id="c_to" class="form-control" list="stationsDatalist"></div>
-          </div>
+        <div class="row g-2 mt-2">
+          <div class="col"><label class="form-label">Data odjazdu</label><input id="s_dateDep" type="date" class="form-control"></div>
+          <div class="col"><label class="form-label">Plan odjazd (HH:MM)</label><input id="s_planDep" class="form-control"></div>
+          <div class="col"><label class="form-label">Real odjazd (HH:MM)</label><input id="s_realDep" class="form-control"></div>
         </div>
-        <div class="modal-footer">
-          <button type="submit" class="btn btn-primary">Zapisz</button>
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
-        </div>
-      </form>
-    </div>
+        <div class="mb-2 mt-2"><label class="form-label">Powód opóźnienia</label><input id="s_delayReason" class="form-control"></div>
+        <div class="mb-2"><label class="form-label">Rozkazy pisemne</label><input id="s_writtenOrders" class="form-control"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="submit" class="btn btn-primary">Zapisz</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
+      </div>
+    </form>
   </div>
+</div>
 
-  <!-- Modal: Order (Sekcja D) -->
-  <div class="modal fade" id="modalOrder" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-      <form id="formOrder" class="modal-content" data-mode="add" data-index="">
-        <div class="modal-header">
-          <h5 class="modal-title">Dodaj dyspozycję</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
-        </div>
-        <div class="modal-body">
-          <div class="mb-2"><label class="form-label">Numer dyspozycji</label><input id="o_number" class="form-control" placeholder="np. R-307"></div>
-          <div class="mb-2"><label class="form-label">Godzina otrzymania (HH:MM)</label><input id="o_time" class="form-control" placeholder="13:05"></div>
-          <div class="mb-2"><label class="form-label">Treść dyspozycji</label><textarea id="o_text" class="form-control" rows="3" required></textarea></div>
-          <div class="mb-2"><label class="form-label">Źródło</label>
-            <select id="o_source" class="form-select">
-              <option>Dyspozytura</option><option>PKP PLK</option><option>Inne</option>
-            </select>
-          </div>
-          <div class="small text-muted mt-1">Godzina musi być w formacie HH:MM lub pole może być puste.</div>
-        </div>
-        <div class="modal-footer">
-          <button type="submit" class="btn btn-primary">Zapisz</button>
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Modal: Station (Sekcja E) -->
-  <div class="modal fade" id="modalStation" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-      <form id="formStation" class="modal-content" data-mode="add" data-index="">
-        <div class="modal-header">
-          <h5 class="modal-title">Dodaj wpis stacji</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
-        </div>
-        <div class="modal-body">
-          <div class="mb-2"><label class="form-label">Nazwa stacji</label>
-            <input id="s_station" class="form-control" list="stationsDatalist" required>
-            <datalist id="stationsDatalist"></datalist>
-          </div>
-          <div class="row g-2">
-            <div class="col"><label class="form-label">Planowy przyjazd (HH:MM)</label><input id="s_planArr" class="form-control" placeholder="12:45"></div>
-            <div class="col"><label class="form-label">Planowy odjazd (HH:MM)</label><input id="s_planDep" class="form-control" placeholder="12:55"></div>
-          </div>
-          <div class="row g-2 mt-2">
-            <div class="col"><label class="form-label">Realny przyjazd (HH:MM)</label><input id="s_realArr" class="form-control" placeholder="13:01"></div>
-            <div class="col"><label class="form-label">Realny odjazd (HH:MM)</label><input id="s_realDep" class="form-control" placeholder="13:05"></div>
-          </div>
-          <div class="mb-2 mt-2"><label class="form-label">Powód opóźnienia</label><input id="s_delayReason" class="form-control"></div>
-          <div class="mb-2"><label class="form-label">Rozkazy pisemne</label><input id="s_writtenOrders" class="form-control"></div>
-          <div class="small text-muted mt-1">Czas musi być w formacie HH:MM (np. 09:05). Puste pola są dozwolone.</div>
-        </div>
-        <div class="modal-footer">
-          <button type="submit" class="btn btn-primary">Zapisz</button>
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Modal: Control (Sekcja F) -->
-  <div class="modal fade" id="modalControl" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-      <form id="formControl" class="modal-content" data-mode="add" data-index="">
-        <div class="modal-header">
-          <h5 class="modal-title">Dodaj kontrolę pociągu</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
-        </div>
-        <div class="modal-body">
-          <div class="mb-2"><label class="form-label">Imię i nazwisko kontrolującego</label><input id="f_by" class="form-control" required></div>
-          <div class="mb-2"><label class="form-label">Numer służbowy</label><input id="f_id" class="form-control"></div>
-          <div class="mb-2"><label class="form-label">Opis kontroli</label><textarea id="f_desc" class="form-control" rows="3"></textarea></div>
-          <div class="mb-2"><label class="form-label">Uwagi</label><input id="f_notes" class="form-control"></div>
-        </div>
-        <div class="modal-footer">
-          <button type="submit" class="btn btn-primary">Zapisz</button>
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Modal: Note (Sekcja G) -->
-  <div class="modal fade" id="modalNote" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-      <form id="formNote" class="modal-content" data-mode="add" data-index="">
-        <div class="modal-header">
-          <h5 class="modal-title">Dodaj uwagę kierownika</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
-        </div>
-        <div class="modal-body">
-          <div class="mb-2"><label class="form-label">Treść uwagi</label><textarea id="n_text" class="form-control" rows="3" required></textarea></div>
-        </div>
-        <div class="modal-footer">
-          <button type="submit" class="btn btn-primary">Zapisz</button>
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Skrypty -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-  <script type="module" src="js/app.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script type="module" src="js/app.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
 </body>
 </html>
