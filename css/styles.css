@@ -1,0 +1,49 @@
+body { background:#f8f9fa; }
+.card { border-radius:8px; }
+.small { font-size:0.85rem; }
+.station-row { border-bottom:1px dashed #e9ecef; padding:8px 0; }
+.badge { font-size:0.9rem; }
+@media (max-width:576px) {
+  h4 { font-size:1.05rem; }
+}
+
+/* PRINT STYLES */
+.print-container {
+  font-family: Arial, Helvetica, sans-serif;
+  color: #111;
+  background: #fff;
+  padding: 18mm;
+  box-sizing: border-box;
+}
+.print-header { text-align: center; margin-bottom: 8mm; }
+.print-title { font-size: 20px; font-weight:700; }
+.print-meta { font-size: 12px; margin-top:6px; color:#333; }
+
+.section { margin-bottom: 8mm; }
+.section h6 { font-size:14px; margin-bottom:6px; font-weight:700; color:#222; }
+
+/* table styles */
+.table-print { width:100%; border-collapse: collapse; font-size:12px; }
+.table-print th, .table-print td { border:1px solid #ddd; padding:6px 8px; vertical-align:top; }
+.table-print th { background:#f2f2f2; font-weight:700; text-align:left; }
+
+/* ensure table header repeats on each page */
+.table-print thead { display: table-header-group; }
+.table-print tfoot { display: table-footer-group; }
+
+/* avoid breaking rows across pages */
+.table-print tr { page-break-inside: avoid; }
+
+/* footer */
+.print-footer { font-size:11px; color:#444; text-align:right; margin-top:6mm; }
+
+/* hide interactive elements if accidentally included */
+button, input, .no-print { display:none !important; }
+
+/* page break helpers */
+.page-break { page-break-after: always; }
+
+/* mobile-friendly scaling for PDF generation */
+@media print {
+  .print-container { padding: 12mm; }
+}
