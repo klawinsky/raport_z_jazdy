@@ -167,8 +167,8 @@
           </div>
           <div class="mb-2"><label class="form-label">Oznaczenie lokomotywy</label><input id="t_loco" class="form-control"></div>
           <div class="row g-2">
-            <div class="col"><label class="form-label">Stacja od</label><input id="t_from" class="form-control"></div>
-            <div class="col"><label class="form-label">Stacja do</label><input id="t_to" class="form-control"></div>
+            <div class="col"><label class="form-label">Stacja od</label><input id="t_from" class="form-control" list="stationsDatalist"></div>
+            <div class="col"><label class="form-label">Stacja do</label><input id="t_to" class="form-control" list="stationsDatalist"></div>
           </div>
         </div>
         <div class="modal-footer">
@@ -200,6 +200,10 @@
               <option>KP</option><option>S</option><option>B</option><option>K</option>
             </select>
           </div>
+          <div class="row g-2 mt-2">
+            <div class="col"><label class="form-label">Stacja od</label><input id="c_from" class="form-control" list="stationsDatalist"></div>
+            <div class="col"><label class="form-label">Stacja do</label><input id="c_to" class="form-control" list="stationsDatalist"></div>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="submit" class="btn btn-primary">Zapisz</button>
@@ -218,12 +222,15 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
         </div>
         <div class="modal-body">
+          <div class="mb-2"><label class="form-label">Numer dyspozycji</label><input id="o_number" class="form-control" placeholder="np. R-307"></div>
+          <div class="mb-2"><label class="form-label">Godzina otrzymania (HH:MM)</label><input id="o_time" class="form-control" placeholder="13:05"></div>
           <div class="mb-2"><label class="form-label">Treść dyspozycji</label><textarea id="o_text" class="form-control" rows="3" required></textarea></div>
           <div class="mb-2"><label class="form-label">Źródło</label>
             <select id="o_source" class="form-select">
               <option>Dyspozytura</option><option>PKP PLK</option><option>Inne</option>
             </select>
           </div>
+          <div class="small text-muted mt-1">Godzina musi być w formacie HH:MM lub pole może być puste.</div>
         </div>
         <div class="modal-footer">
           <button type="submit" class="btn btn-primary">Zapisz</button>
