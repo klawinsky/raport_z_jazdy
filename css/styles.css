@@ -1,54 +1,14 @@
-body { background:#f8f9fa; }
-.card { border-radius:8px; }
-.small { font-size:0.85rem; }
-.station-row { border-bottom:1px dashed #e9ecef; padding:8px 0; }
-.badge { font-size:0.9rem; }
-@media (max-width:576px) {
-  h4 { font-size:1.05rem; }
-}
-
-/* Delay color classes for UI and print */
-.delay-pos { color: #d9534f; font-weight:600; }   /* positive = delay -> red */
-.delay-neg { color: #28a745; font-weight:600; }   /* negative = early -> green */
-.delay-zero { color: #000000; font-weight:600; }  /* zero -> black */
-
-/* PRINT STYLES - zoptymalizowane pod A4 */
-.print-container {
-  font-family: Arial, Helvetica, sans-serif;
-  color: #111;
-  background: #fff;
-  padding: 16mm 14mm;
-  box-sizing: border-box;
-  font-size: 11.5px;
-  line-height: 1.25;
-}
-.print-header { text-align: center; margin-bottom: 8mm; }
-.print-title { font-size: 18px; font-weight:700; }
-.print-meta { font-size: 10.5px; margin-top:6px; color:#333; }
-
-.section { margin-bottom: 8mm; }
-.section h6 { font-size:13px; margin-bottom:6px; font-weight:700; color:#222; }
-
-/* table styles */
-.table-print { width:100%; border-collapse: collapse; font-size:11px; }
-.table-print th, .table-print td { border:1px solid #ddd; padding:6px 6px; vertical-align:top; }
-.table-print th { background:#f2f2f2; font-weight:700; text-align:left; }
-
-/* ensure table header repeats on each page */
-.table-print thead { display: table-header-group; }
-.table-print tfoot { display: table-footer-group; }
-
-/* avoid breaking rows across pages */
-.table-print tr { page-break-inside: avoid; }
-
-/* footer */
-.print-footer { font-size:11px; color:#444; text-align:right; margin-top:6mm; }
-
-/* hide interactive elements only in print view */
-@media print {
-  button, input, .no-print { display: none !important; }
-  .print-container { padding: 12mm; font-size: 10.5px; }
-}
-
-/* page break helpers */
-.page-break { page-break-after: always; }
+/* css/styles.css */
+body { background:#f7f7f9; color:#222; }
+.station-row { padding:8px 0; border-bottom:1px solid rgba(0,0,0,0.04); }
+.delay-pos { color: #c00; font-weight:600; }
+.delay-neg { color: #0a7; font-weight:600; }
+.delay-zero { color: #333; }
+.print-container { font-family: Arial, Helvetica, sans-serif; color:#111; background:#fff; padding:12mm; }
+.print-header { margin-bottom:8px; }
+.print-title { font-size:18px; font-weight:700; }
+.print-meta { font-size:12px; color:#444; }
+.table-print { width:100%; border-collapse:collapse; margin-top:6px; }
+.table-print th, .table-print td { border:1px solid #ddd; padding:6px; font-size:12px; text-align:left; }
+.section { margin-bottom:12px; }
+.print-footer { margin-top:12px; font-size:11px; color:#666; }
