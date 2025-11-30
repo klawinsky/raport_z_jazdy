@@ -115,6 +115,14 @@ const formStation = document.getElementById('formStation');
 const formControl = document.getElementById('formControl');
 const formNote = document.getElementById('formNote');
 
+// “Dodaj” buttons
+const addTractionBtn  = document.getElementById('addTractionBtn');
+const addConductorBtn = document.getElementById('addConductorBtn');
+const addOrderBtn     = document.getElementById('addOrderBtn');
+const addStationBtn   = document.getElementById('addStationBtn');
+const addControlBtn   = document.getElementById('addControlBtn');
+const addNoteBtn      = document.getElementById('addNoteBtn');
+
 let currentReport = null;
 let currentUser = null;
 let stationsSet = new Set(sampleStations);
@@ -206,6 +214,44 @@ function renderList(container, arr, rowRenderer) {
   });
 }
 
+/* ---------- Przyciski “Dodaj” ---------- */
+addTractionBtn?.addEventListener('click', () => {
+  formTraction.setAttribute('data-mode','add');
+  formTraction.setAttribute('data-index','');
+  formTraction.reset();
+});
+addConductorBtn?.addEventListener('click', () => {
+  formConductor.setAttribute('data-mode','add');
+  formConductor.setAttribute('data-index','');
+  formConductor.reset();
+});
+addOrderBtn?.addEventListener('click', () => {
+  formOrder.setAttribute('data-mode','add');
+  formOrder.setAttribute('data-index','');
+  formOrder.reset();
+});
+addStationBtn?.addEventListener('click', () => {
+  // podpowiedz datę z sekcji A
+  const arrEl = document.getElementById('s_dateArr');
+  const depEl = document.getElementById('s_dateDep');
+  const fallback = trainDateEl.value || currentReport?.sectionA?.date || '';
+  if (arrEl && !arrEl.value) arrEl.value = fallback;
+  if (depEl && !depEl.value) depEl.value = fallback;
+  formStation.setAttribute('data-mode','add');
+  formStation.setAttribute('data-index','');
+  formStation.reset();
+});
+addControlBtn?.addEventListener('click', () => {
+  formControl.setAttribute('data-mode','add');
+  formControl.setAttribute('data-index','');
+  formControl.reset();
+});
+addNoteBtn?.addEventListener('click', () => {
+  formNote.setAttribute('data-mode','add');
+  formNote.setAttribute('data-index','');
+  formNote.reset();
+});
+
 /* ---------- Sekcja B ---------- */
 function renderTractionRow(item, idx) {
   const div = document.createElement('div');
@@ -225,7 +271,7 @@ function renderTractionRow(item, idx) {
   div.querySelector('[data-edit]').addEventListener('click', () => openEditModal('traction', idx));
   return div;
 }
-formTraction.addEventListener('submit', async (e) => {
+formTraction?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const name = document.getElementById('t_name').value.trim();
   const id = document.getElementById('t_id').value.trim();
@@ -245,7 +291,8 @@ formTraction.addEventListener('submit', async (e) => {
   if (to) stationsSet.add(to);
   populateStationsDatalist(Array.from(stationsSet));
   formTraction.reset();
-  bootstrap.Modal.getInstance(document.getElementById('modalTraction')).hide();
+  const m = bootstrap.Modal.getInstance(document.getElementById('modalTraction'));
+  m && m.hide();
   await saveAndRender();
 });
 
@@ -268,7 +315,7 @@ function renderConductorRow(item, idx) {
   div.querySelector('[data-edit]').addEventListener('click', () => openEditModal('conductor', idx));
   return div;
 }
-formConductor.addEventListener('submit', async (e) => {
+formConductor?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const name = document.getElementById('c_name').value.trim();
   const id = document.getElementById('c_id').value.trim();
@@ -288,7 +335,8 @@ formConductor.addEventListener('submit', async (e) => {
   if (to) stationsSet.add(to);
   populateStationsDatalist(Array.from(stationsSet));
   formConductor.reset();
-  bootstrap.Modal.getInstance(document.getElementById('modalConductor')).hide();
+  const m = bootstrap.Modal.getInstance(document.getElementById('modalConductor'));
+  m && m.hide();
   await saveAndRender();
 });
 
@@ -310,7 +358,7 @@ function renderOrderRow(item, idx) {
   div.querySelector('[data-edit]').addEventListener('click', () => openEditModal('order', idx));
   return div;
 }
-formOrder.addEventListener('submit', async (e) => {
+formOrder?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const number = document.getElementById('o_number').value.trim();
   const time = document.getElementById('o_time').value.trim();
@@ -327,7 +375,8 @@ formOrder.addEventListener('submit', async (e) => {
     currentReport.sectionD.push(entry);
   }
   formOrder.reset();
-  bootstrap.Modal.getInstance(document.getElementById('modalOrder')).hide();
+  const m = bootstrap.Modal.getInstance(document.getElementById('modalOrder'));
+  m && m.hide();
   await saveAndRender();
 });
 
@@ -349,7 +398,7 @@ function renderStationRow(item, idx) {
         <div class="small text-muted">Data odj.: ${item.dateDep || '-'} · Plan: ${item.planDep || '-'} · Real: ${item.realDep || '-'}</div>
         <div class="small">Odchylenie odj.: <span class="${depClass}">${depText}</span></div>
         <div class="small">Postój realny: ${stopText}</div>
-        <div class="small text-muted">Powód: ${item.delayReason || '-'}; Rozkazy pisemne: ${item.writtenOrders || '-'}</div>
+        <div class="small text-muted">Powód: ${item.delayReason || '-'}; Rozkazy: ${item.writtenOrders || '-'}</div>
       </div>
       <div>
         <button class="btn btn-sm btn-outline-secondary me-1" data-edit="${idx}" data-type="station">Edytuj</button>
@@ -363,7 +412,7 @@ function renderStationRow(item, idx) {
   div.querySelector('[data-edit]').addEventListener('click', () => openEditModal('station', idx));
   return div;
 }
-formStation.addEventListener('submit', async (e) => {
+formStation?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const station = document.getElementById('s_station').value.trim();
   const dateArr = document.getElementById('s_dateArr').value || trainDateEl.value || currentReport.sectionA.date || '';
@@ -412,7 +461,8 @@ formStation.addEventListener('submit', async (e) => {
     currentReport.sectionE.push(entry);
   }
   formStation.reset();
-  bootstrap.Modal.getInstance(document.getElementById('modalStation')).hide();
+  const m = bootstrap.Modal.getInstance(document.getElementById('modalStation'));
+  m && m.hide();
   await saveAndRender();
 });
 
@@ -437,7 +487,7 @@ function renderControlRow(item, idx) {
   div.querySelector('[data-edit]').addEventListener('click', () => openEditModal('control', idx));
   return div;
 }
-formControl.addEventListener('submit', async (e) => {
+formControl?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const by = document.getElementById('f_by').value.trim();
   const id = document.getElementById('f_id').value.trim();
@@ -453,7 +503,8 @@ formControl.addEventListener('submit', async (e) => {
     currentReport.sectionF.push(entry);
   }
   formControl.reset();
-  bootstrap.Modal.getInstance(document.getElementById('modalControl')).hide();
+  const m = bootstrap.Modal.getInstance(document.getElementById('modalControl'));
+  m && m.hide();
   await saveAndRender();
 });
 
@@ -474,7 +525,7 @@ function renderNoteRow(item, idx) {
   div.querySelector('[data-edit]').addEventListener('click', () => openEditModal('note', idx));
   return div;
 }
-formNote.addEventListener('submit', async (e) => {
+formNote?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const text = document.getElementById('n_text').value.trim();
   if (!text) return alert('Treść uwagi jest wymagana.');
@@ -487,7 +538,8 @@ formNote.addEventListener('submit', async (e) => {
     currentReport.sectionG.push(entry);
   }
   formNote.reset();
-  bootstrap.Modal.getInstance(document.getElementById('modalNote')).hide();
+  const m = bootstrap.Modal.getInstance(document.getElementById('modalNote'));
+  m && m.hide();
   await saveAndRender();
 });
 
