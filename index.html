@@ -1,46 +1,155 @@
 <!doctype html>
 <html lang="pl">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Raport z jazdy pociągu</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Bootstrap 5 CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
   <link href="css/styles.css" rel="stylesheet">
 </head>
 <body>
   <div class="container py-3" id="app">
     <!-- Panel startowy -->
     <div id="startPanel" class="card p-3">
-      <h3>Panel startowy</h3>
-      <div class="mb-2">
-        <input id="userName" class="form-control" placeholder="Imię i nazwisko">
+      <h3 class="mb-3">Panel startowy</h3>
+
+      <div class="row g-2 mb-2">
+        <div class="col-12 col-md-8">
+          <input id="userName" class="form-control" placeholder="Imię i nazwisko" />
+        </div>
+        <div class="col-12 col-md-4">
+          <input id="userId" class="form-control" placeholder="Numer służbowy" />
+        </div>
       </div>
-      <div class="mb-2">
-        <input id="userId" class="form-control" placeholder="Numer służbowy">
-      </div>
+
       <div class="d-flex gap-2">
         <button id="newReportBtn" class="btn btn-primary">Otwórz nowy raport</button>
         <button id="takeReportBtn" class="btn btn-outline-secondary">Przejmij raport</button>
+        <button id="importBtnStart" class="btn btn-outline-info">Importuj raport (JSON)</button>
+        <input id="importFileStart" type="file" accept=".json" style="display:none;">
       </div>
     </div>
 
-    <!-- Panel raportu (ukryty domyślnie) -->
+    <!-- Panel raportu -->
     <div id="reportPanel" class="mt-3" style="display:none;">
-      <h1 class="h4">Raport z jazdy pociągu <span id="reportNumber" class="badge bg-secondary"></span></h1>
-      <div id="sections"></div>
-      <div class="mt-3 d-flex justify-content-between">
-        <div>
-          <button id="saveJson" class="btn btn-sm btn-outline-info">Eksportuj JSON</button>
-          <input id="importFile" type="file" accept=".json" style="display:none;">
-          <button id="importBtn" class="btn btn-sm btn-outline-secondary">Importuj JSON</button>
+      <div class="card p-3">
+        <div class="d-flex justify-content-between align-items-start">
+          <h4 class="mb-0">Raport z jazdy pociągu</h4>
+          <div class="text-end">
+            <div><strong id="reportNumber" class="badge bg-secondary fs-6"></strong></div>
+            <div class="small text-muted" id="currentUser"></div>
+          </div>
         </div>
-        <div>
-          <button id="previewPdf" class="btn btn-success btn-sm">Pobierz PDF</button>
+
+        <hr>
+
+        <div id="sections" class="mb-3">
+          <!-- Sekcja A -->
+          <div class="mb-3 card p-3" id="sectionA">
+            <h5>A - Dane ogólne</h5>
+            <div class="row g-2">
+              <div class="col-6 col-md-3">
+                <label class="form-label small">Kategoria</label>
+                <select id="cat" class="form-select">
+                  <option value="">Wybierz</option>
+                  <option>EX</option><option>MP</option><option>RJ</option><option>OS</option><option>PW</option>
+                </select>
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label small">Trakcja</label>
+                <select id="traction" class="form-select">
+                  <option value="">Wybierz</option>
+                  <option>E</option><option>S</option>
+                </select>
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label small">Numer pociągu</label>
+                <input id="trainNumber" class="form-control" maxlength="6" />
+              </div>
+              <div class="col-6 col-md-3">
+                <label class="form-label small">Relacja (od - do)</label>
+                <input id="route" class="form-control" placeholder="Stacja początkowa - Stacja końcowa" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Sekcja B: Drużyna trakcyjna -->
+          <div class="mb-3 card p-3" id="sectionB">
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="mb-0">B - Drużyna trakcyjna</h5>
+              <button id="addTractionBtn" class="btn btn-sm btn-outline-primary">Dodaj</button>
+            </div>
+            <div id="tractionList" class="mt-2"></div>
+          </div>
+
+          <!-- Sekcja C: Drużyna konduktorska -->
+          <div class="mb-3 card p-3" id="sectionC">
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="mb-0">C - Drużyna konduktorska</h5>
+              <button id="addConductorBtn" class="btn btn-sm btn-outline-primary">Dodaj</button>
+            </div>
+            <div id="conductorList" class="mt-2"></div>
+          </div>
+
+          <!-- Sekcja D: Dyspozycje -->
+          <div class="mb-3 card p-3" id="sectionD">
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="mb-0">D - Dyspozycje</h5>
+              <button id="addOrderBtn" class="btn btn-sm btn-outline-primary">Dodaj</button>
+            </div>
+            <div id="ordersList" class="mt-2"></div>
+          </div>
+
+          <!-- Sekcja E: Dane o jeździe pociągu -->
+          <div class="mb-3 card p-3" id="sectionE">
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="mb-0">E - Dane o jeździe pociągu</h5>
+              <button id="addStationBtn" class="btn btn-sm btn-outline-primary">Dodaj</button>
+            </div>
+            <div id="stationsList" class="mt-2"></div>
+          </div>
+
+          <!-- Sekcja F: Kontrola pociągu -->
+          <div class="mb-3 card p-3" id="sectionF">
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="mb-0">F - Kontrola pociągu</h5>
+              <button id="addControlBtn" class="btn btn-sm btn-outline-primary">Dodaj</button>
+            </div>
+            <div id="controlsList" class="mt-2"></div>
+          </div>
+
+          <!-- Sekcja G: Uwagi kierownika -->
+          <div class="mb-3 card p-3" id="sectionG">
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="mb-0">G - Uwagi kierownika pociągu</h5>
+              <button id="addNoteBtn" class="btn btn-sm btn-outline-primary">Dodaj</button>
+            </div>
+            <div id="notesList" class="mt-2"></div>
+          </div>
         </div>
+
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <button id="exportJson" class="btn btn-outline-info btn-sm">Eksportuj JSON</button>
+            <button id="importBtn" class="btn btn-outline-secondary btn-sm">Importuj JSON</button>
+            <input id="importFile" type="file" accept=".json" style="display:none;">
+          </div>
+          <div>
+            <button id="previewPdf" class="btn btn-success btn-sm">Pobierz PDF</button>
+            <button id="closeReport" class="btn btn-danger btn-sm">Zamknij raport</button>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
 
+  <!-- Modale (dynamiczne tworzone w JS) -->
+
+  <!-- Skrypty -->
   <script type="module" src="js/app.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
 </body>
