@@ -355,8 +355,8 @@ function renderStationRow(item, idx) {
       <div>
         <strong>${item.station}</strong>
         <div class="small text-muted">Plan: ${item.planArr || '-'} → ${item.planDep || '-'}; Real: ${item.realArr || '-'} → ${item.realDep || '-'}</div>
-        <div class="small">Opóźnienie/przyspieszenie przyjazdu: <span class="${arrClass}">${arrText}</span></div>
-        <div class="small">Opóźnienie/przyspieszenie odjazdu: <span class="${depClass}">${depText}</span></div>
+        <div class="small">Odchylenie przyj.: <span class="${arrClass}">${arrText}</span></div>
+        <div class="small">Odchylenie odj.: <span class="${depClass}">${depText}</span></div>
         <div class="small">Postój realny: ${stopText}</div>
         <div class="small text-muted">Powód: ${item.delayReason || '-'}; Rozkazy pisemne: ${item.writtenOrders || '-'}</div>
       </div>
@@ -710,13 +710,13 @@ previewPdfBtn.addEventListener('click', async () => {
     <thead>
       <tr>
         <th>Stacja</th>
-        <th>Plan przyjazd</th>
-        <th>Real przyjazd</th>
-        <th>Opóźnienie/przyspieszenie przyjazdu</th>
-        <th>Plan odjazd</th>
-        <th>Real odjazd</th>
-        <th>Opóźnienie/przyspieszenie odjazdu</th>
-        <th>Postój realny (min)</th>
+        <th>Plan przyj.</th>
+        <th>Real przyj.</th>
+        <th>Odchylenie przyj.</th>
+        <th>Plan odj.</th>
+        <th>Real odj.</th>
+        <th>Odchylenie odj.</th>
+        <th>Postój (min)</th>
         <th>Powód / Rozkazy</th>
       </tr>
     </thead>
@@ -724,18 +724,18 @@ previewPdfBtn.addEventListener('click', async () => {
       ${currentReport.sectionE.length === 0 ? `<tr><td colspan="9">-</td></tr>` : currentReport.sectionE.map(s => {
         const arrVal = (s.delayArrMinutes != null) ? `${s.delayArrMinutes} min` : '-';
         const depVal = (s.delayDepMinutes != null) ? `${s.delayDepMinutes} min` : '-';
-        const arrClass = s.delayArrMinutes == null ? '' : (s.delayArrMinutes > 0 ? 'color:red;font-weight:600;' : (s.delayArrMinutes < 0 ? 'color:green;font-weight:600;' : 'color:black;font-weight:600;'));
-        const depClass = s.delayDepMinutes == null ? '' : (s.delayDepMinutes > 0 ? 'color:red;font-weight:600;' : (s.delayDepMinutes < 0 ? 'color:green;font-weight:600;' : 'color:black;font-weight:600;'));
+        const arrStyle = s.delayArrMinutes == null ? '' : (s.delayArrMinutes > 0 ? 'color:red;font-weight:600;' : (s.delayArrMinutes < 0 ? 'color:green;font-weight:600;' : 'color:black;font-weight:600;'));
+        const depStyle = s.delayDepMinutes == null ? '' : (s.delayDepMinutes > 0 ? 'color:red;font-weight:600;' : (s.delayDepMinutes < 0 ? 'color:green;font-weight:600;' : 'color:black;font-weight:600;'));
         const stop = s.realStopMinutes != null ? `${s.realStopMinutes}` : '-';
         const pow = (s.delayReason || '-') + (s.writtenOrders ? ' / ' + s.writtenOrders : '');
         return `<tr>
           <td>${s.station || '-'}</td>
           <td>${s.planArr || '-'}</td>
           <td>${s.realArr || '-'}</td>
-          <td style="${arrClass}">${arrVal}</td>
+          <td style="${arrStyle}">${arrVal}</td>
           <td>${s.planDep || '-'}</td>
           <td>${s.realDep || '-'}</td>
-          <td style="${depClass}">${depVal}</td>
+          <td style="${depStyle}">${depVal}</td>
           <td>${stop}</td>
           <td>${pow}</td>
         </tr>`;
