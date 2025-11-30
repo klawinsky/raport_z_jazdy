@@ -1,12 +1,21 @@
-// pdf.js
-export function exportPdf(element, filename = 'Raport.pdf') {
+// js/pdf.js
+// Proste opakowanie dla html2pdf.js (używa globalnego html2pdf)
+export async function exportPdf(containerElement, filename = 'raport.pdf') {
+  if (!containerElement) throw new Error('Brak zawartości do eksportu');
+  // minimalne style dla wydruku
+  containerElement.style.padding = '10mm';
+  containerElement.style.background = '#fff';
   const opt = {
-    margin: [12, 10, 12, 10], // mm top/right/bottom/left
-    filename,
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, logging: false },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-    pagebreak: { mode: ['css', 'legacy'] }
+    margin:       10,
+    filename:     filename,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
   };
-  return html2pdf().set(opt).from(element).save();
+  // html2pdf jest załadowany globalnie przez CDN w index.html
+  return new Promise((resolve, reject) => {
+    try {
+      html2pdf().set(opt).from(containerElement).save().then(() => resolve(true)).catch(err => reject(err));
+    } catch (err) { reject(err); }
+  });
 }
