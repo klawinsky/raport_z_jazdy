@@ -1,22 +1,49 @@
 // js/app.js
+// Kompletny, samodzielny plik aplikacji — wklej zamiast starego app.js
+
 import { saveReport, getReport, nextCounter } from './db.js';
 import { exportPdf } from './pdf.js';
 
-/* ---------- Safe init & utilities ---------- */
+/* ===========================
+   Helpery i bezpieczna inicjalizacja
+   =========================== */
+
+// Globalne logowanie błędów (łatwiejsze debugowanie)
 window.addEventListener('error', (ev) => {
   console.error('Global error:', ev.error || ev.message, ev);
 });
 
-function qs(id) {
-  return document.getElementById(id);
-}
-function on(el, ev, fn) {
-  if (!el) return;
-  el.addEventListener(ev, fn);
-}
+// Bezpieczne pobieranie elementu
+function qs(id) { return document.getElementById(id); }
+function on(el, ev, fn) { if (!el) return; el.addEventListener(ev, fn); }
 function safeText(v) { return (v === undefined || v === null || v === '') ? '-' : v; }
 
-/* ---------- Helpers (date/time/delay) ---------- */
+// Bezpieczne zamykanie modala i usuwanie backdrop
+function closeModalSafe(modalId) {
+  try {
+    const modalEl = document.getElementById(modalId);
+    if (modalEl) {
+      const inst = bootstrap.Modal.getInstance(modalEl);
+      if (inst) inst.hide();
+      else {
+        // jeśli nie ma instancji, utwórz tymczasową i zamknij
+        const tmp = new bootstrap.Modal(modalEl);
+        tmp.hide();
+      }
+      modalEl.setAttribute('aria-hidden', 'true');
+    }
+  } catch (err) {
+    console.error('closeModalSafe error:', err);
+  } finally {
+    // zawsze usuń pozostałości
+    document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+    document.body.classList.remove('modal-open');
+  }
+}
+
+/* ===========================
+   Data / czas / obliczenia
+   =========================== */
 function formatDateForNumber(d) {
   const DD = String(d.getDate()).padStart(2,'0');
   const MM = String(d.getMonth()+1).padStart(2,'0');
@@ -53,7 +80,9 @@ function formatDelayText(value) {
   return `${value} min`;
 }
 
-/* ---------- Autocomplete (stations) ---------- */
+/* ===========================
+   Autouzupełnianie stacji
+   =========================== */
 const sampleStations = [
   'Kraków Główny','Warszawa Centralna','Gdańsk Główny','Poznań Główny','Wrocław Główny',
   'Katowice','Łódź Fabryczna','Sopot','Gdynia Główna','Warszawa Wschodnia'
@@ -69,7 +98,9 @@ function populateStationsDatalist(list) {
   });
 }
 
-/* ---------- Model factory ---------- */
+/* ===========================
+   Model raportu
+   =========================== */
 function createEmptyReport(number, user) {
   return {
     number,
@@ -88,9 +119,11 @@ function createEmptyReport(number, user) {
   };
 }
 
-/* ---------- Main app (initialized on DOM ready) ---------- */
+/* ===========================
+   Główna logika (po DOMContentLoaded)
+   =========================== */
 document.addEventListener('DOMContentLoaded', () => {
-  // UI refs
+  // Referencje UI
   const startPanel = qs('startPanel');
   const reportPanel = qs('reportPanel');
 
@@ -135,14 +168,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const addControlBtn   = qs('addControlBtn');
   const addNoteBtn      = qs('addNoteBtn');
 
-  // state
+  // Stan aplikacji
   let currentReport = null;
   let currentUser = null;
   let stationsSet = new Set(sampleStations);
 
   populateStationsDatalist(Array.from(stationsSet));
 
-  /* ---------- Core actions exposed for safe-init block earlier ---------- */
+  /* ---------- Funkcje pomocnicze dostępne globalnie (opcjonalnie) ---------- */
   window.createNewReport = async ({ name, id }) => {
     currentUser = { name, id };
     const counter = await nextCounter();
@@ -166,7 +199,6 @@ document.addEventListener('DOMContentLoaded', () => {
     rep.currentDriver = currentUser;
     rep.lastEditedAt = new Date().toISOString();
     currentReport = rep;
-    // update stations set
     (rep.sectionE || []).forEach(s => { if (s.station) stationsSet.add(s.station); });
     populateStationsDatalist(Array.from(stationsSet));
     await saveReport(currentReport);
@@ -184,7 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  /* ---------- Start / Take / Import handlers (safe) ---------- */
+  /* ---------- Start / Przejmij / Import (panel startowy) ---------- */
   on(newReportBtn, 'click', async () => {
     const name = qs('userName')?.value?.trim();
     const id = qs('userId')?.value?.trim();
@@ -207,7 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
     await window.importReportFromJson(text);
   });
 
-  /* ---------- Open/close UI ---------- */
+  /* ---------- Otwieranie / zamykanie widoku raportu ---------- */
   function openReportUI() {
     startPanel.style.display = 'none';
     reportPanel.style.display = 'block';
@@ -222,20 +254,20 @@ document.addEventListener('DOMContentLoaded', () => {
     startPanel.style.display = 'block';
   });
 
-  /* ---------- Render helpers ---------- */
+  /* ---------- Render całego raportu ---------- */
   function renderReport() {
     if (!currentReport) return;
     reportNumberEl.textContent = currentReport.number;
     currentUserEl.textContent = `${currentReport.currentDriver.name} (${currentReport.currentDriver.id})`;
 
-    // Section A
+    // Sekcja A
     catEl.value = currentReport.sectionA.category || '';
     tractionEl.value = currentReport.sectionA.traction || '';
     trainNumberEl.value = currentReport.sectionA.trainNumber || '';
     routeEl.value = currentReport.sectionA.route || '';
     trainDateEl.value = currentReport.sectionA.date || '';
 
-    // lists
+    // Sekcje B-G
     renderList(tractionList, currentReport.sectionB, renderTractionRow);
     renderList(conductorList, currentReport.sectionC, renderConductorRow);
     renderList(ordersList, currentReport.sectionD, renderOrderRow);
@@ -249,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
     arr.forEach((it, idx) => container.appendChild(renderer(it, idx)));
   }
 
-  /* ---------- "Dodaj" buttons open modals and prepare forms ---------- */
+  /* ---------- "Dodaj" buttons (otwierają modale) ---------- */
   on(addTractionBtn, 'click', () => {
     if (!formTraction) return;
     formTraction.setAttribute('data-mode','add');
@@ -273,16 +305,12 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   on(addStationBtn, 'click', () => {
     if (!formStation) return;
-    // prefill dates from section A
     const fallback = trainDateEl.value || currentReport?.sectionA?.date || '';
     const sDateArr = qs('s_dateArr');
     const sDateDep = qs('s_dateDep');
-    if (sDateArr && !sDateArr.value) sDateArr.value = fallback;
-    if (sDateDep && !sDateDep.value) sDateDep.value = fallback;
     formStation.setAttribute('data-mode','add');
     formStation.setAttribute('data-index','');
     formStation.reset();
-    // reapply prefilled dates after reset
     if (sDateArr) sDateArr.value = fallback;
     if (sDateDep) sDateDep.value = fallback;
     new bootstrap.Modal(qs('modalStation')).show();
@@ -302,7 +330,9 @@ document.addEventListener('DOMContentLoaded', () => {
     new bootstrap.Modal(qs('modalNote')).show();
   });
 
-  /* ---------- Section B (Traction) ---------- */
+  /* ===========================
+     Sekcja B - Drużyna trakcyjna
+     =========================== */
   function renderTractionRow(item, idx) {
     const div = document.createElement('div');
     div.className = 'd-flex justify-content-between align-items-center station-row';
@@ -319,33 +349,41 @@ document.addEventListener('DOMContentLoaded', () => {
     div.querySelector('[data-edit]').addEventListener('click', () => openEditModal('traction', idx));
     return div;
   }
+
   on(formTraction, 'submit', async (e) => {
     e.preventDefault();
-    const name = qs('t_name').value.trim();
-    const id = qs('t_id').value.trim();
-    const zdp = qs('t_zdp').value;
-    const loco = qs('t_loco').value.trim();
-    const from = qs('t_from').value.trim();
-    const to = qs('t_to').value.trim();
-    if (!name || !id) return alert('Imię i numer są wymagane.');
-    const mode = formTraction.getAttribute('data-mode');
-    const entry = { name, id, zdp, loco, from, to };
-    if (mode === 'edit') {
-      const idx = Number(formTraction.getAttribute('data-index'));
-      currentReport.sectionB[idx] = entry;
-    } else {
-      currentReport.sectionB.push(entry);
+    try {
+      const name = qs('t_name').value.trim();
+      const id = qs('t_id').value.trim();
+      const zdp = qs('t_zdp').value;
+      const loco = qs('t_loco').value.trim();
+      const from = qs('t_from').value.trim();
+      const to = qs('t_to').value.trim();
+      if (!name || !id) return alert('Imię i numer są wymagane.');
+      const mode = formTraction.getAttribute('data-mode');
+      const entry = { name, id, zdp, loco, from, to };
+      if (mode === 'edit') {
+        const idx = Number(formTraction.getAttribute('data-index'));
+        currentReport.sectionB[idx] = entry;
+      } else {
+        currentReport.sectionB.push(entry);
+      }
+      if (from) stationsSet.add(from);
+      if (to) stationsSet.add(to);
+      populateStationsDatalist(Array.from(stationsSet));
+      await saveAndRender();
+      formTraction.reset();
+      closeModalSafe('modalTraction');
+    } catch (err) {
+      console.error('Traction submit error:', err);
+      alert('Błąd podczas zapisu danych drużyny trakcyjnej: ' + (err.message || err));
+      closeModalSafe('modalTraction');
     }
-    if (from) stationsSet.add(from);
-    if (to) stationsSet.add(to);
-    populateStationsDatalist(Array.from(stationsSet));
-    formTraction.reset();
-    const m = bootstrap.Modal.getInstance(qs('modalTraction'));
-    m && m.hide();
-    await saveAndRender();
   });
 
-  /* ---------- Section C (Conductor) ---------- */
+  /* ===========================
+     Sekcja C - Drużyna konduktorska
+     =========================== */
   function renderConductorRow(item, idx) {
     const div = document.createElement('div');
     div.className = 'd-flex justify-content-between align-items-center station-row';
@@ -362,33 +400,41 @@ document.addEventListener('DOMContentLoaded', () => {
     div.querySelector('[data-edit]').addEventListener('click', () => openEditModal('conductor', idx));
     return div;
   }
+
   on(formConductor, 'submit', async (e) => {
     e.preventDefault();
-    const name = qs('c_name').value.trim();
-    const id = qs('c_id').value.trim();
-    const zdp = qs('c_zdp').value;
-    const role = qs('c_role').value;
-    const from = qs('c_from').value.trim();
-    const to = qs('c_to').value.trim();
-    if (!name || !id) return alert('Imię i numer są wymagane.');
-    const mode = formConductor.getAttribute('data-mode');
-    const entry = { name, id, zdp, role, from, to };
-    if (mode === 'edit') {
-      const idx = Number(formConductor.getAttribute('data-index'));
-      currentReport.sectionC[idx] = entry;
-    } else {
-      currentReport.sectionC.push(entry);
+    try {
+      const name = qs('c_name').value.trim();
+      const id = qs('c_id').value.trim();
+      const zdp = qs('c_zdp').value;
+      const role = qs('c_role').value;
+      const from = qs('c_from').value.trim();
+      const to = qs('c_to').value.trim();
+      if (!name || !id) return alert('Imię i numer są wymagane.');
+      const mode = formConductor.getAttribute('data-mode');
+      const entry = { name, id, zdp, role, from, to };
+      if (mode === 'edit') {
+        const idx = Number(formConductor.getAttribute('data-index'));
+        currentReport.sectionC[idx] = entry;
+      } else {
+        currentReport.sectionC.push(entry);
+      }
+      if (from) stationsSet.add(from);
+      if (to) stationsSet.add(to);
+      populateStationsDatalist(Array.from(stationsSet));
+      await saveAndRender();
+      formConductor.reset();
+      closeModalSafe('modalConductor');
+    } catch (err) {
+      console.error('Conductor submit error:', err);
+      alert('Błąd podczas zapisu drużyny konduktorskiej: ' + (err.message || err));
+      closeModalSafe('modalConductor');
     }
-    if (from) stationsSet.add(from);
-    if (to) stationsSet.add(to);
-    populateStationsDatalist(Array.from(stationsSet));
-    formConductor.reset();
-    const m = bootstrap.Modal.getInstance(qs('modalConductor'));
-    m && m.hide();
-    await saveAndRender();
   });
 
-  /* ---------- Section D (Orders) ---------- */
+  /* ===========================
+     Sekcja D - Dyspozycje
+     =========================== */
   function renderOrderRow(item, idx) {
     const meta = `${item.number ? 'Nr: ' + item.number + ' · ' : ''}${item.time ? 'Godz.: ' + item.time : ''}`;
     const div = document.createElement('div');
@@ -406,29 +452,37 @@ document.addEventListener('DOMContentLoaded', () => {
     div.querySelector('[data-edit]').addEventListener('click', () => openEditModal('order', idx));
     return div;
   }
+
   on(formOrder, 'submit', async (e) => {
     e.preventDefault();
-    const number = qs('o_number').value.trim();
-    const time = qs('o_time').value.trim();
-    const text = qs('o_text').value.trim();
-    const source = qs('o_source').value;
-    if (!text) return alert('Treść dyspozycji jest wymagana.');
-    if (!isValidTime(time)) return alert('Godzina musi być w formacie HH:MM lub pusta.');
-    const mode = formOrder.getAttribute('data-mode');
-    const entry = { number, time, text, source };
-    if (mode === 'edit') {
-      const idx = Number(formOrder.getAttribute('data-index'));
-      currentReport.sectionD[idx] = entry;
-    } else {
-      currentReport.sectionD.push(entry);
+    try {
+      const number = qs('o_number').value.trim();
+      const time = qs('o_time').value.trim();
+      const text = qs('o_text').value.trim();
+      const source = qs('o_source').value;
+      if (!text) return alert('Treść dyspozycji jest wymagana.');
+      if (!isValidTime(time)) return alert('Godzina musi być w formacie HH:MM lub pusta.');
+      const mode = formOrder.getAttribute('data-mode');
+      const entry = { number, time, text, source };
+      if (mode === 'edit') {
+        const idx = Number(formOrder.getAttribute('data-index'));
+        currentReport.sectionD[idx] = entry;
+      } else {
+        currentReport.sectionD.push(entry);
+      }
+      await saveAndRender();
+      formOrder.reset();
+      closeModalSafe('modalOrder');
+    } catch (err) {
+      console.error('Order submit error:', err);
+      alert('Błąd podczas zapisu dyspozycji: ' + (err.message || err));
+      closeModalSafe('modalOrder');
     }
-    formOrder.reset();
-    const m = bootstrap.Modal.getInstance(qs('modalOrder'));
-    m && m.hide();
-    await saveAndRender();
   });
 
-  /* ---------- Section E (Stations) ---------- */
+  /* ===========================
+     Sekcja E - Dane o jeździe pociągu
+     =========================== */
   function renderStationRow(item, idx) {
     const arrClass = formatDelayClass(item.delayArrMinutes);
     const depClass = formatDelayClass(item.delayDepMinutes);
@@ -460,61 +514,69 @@ document.addEventListener('DOMContentLoaded', () => {
     div.querySelector('[data-edit]').addEventListener('click', () => openEditModal('station', idx));
     return div;
   }
+
   on(formStation, 'submit', async (e) => {
     e.preventDefault();
-    const station = qs('s_station').value.trim();
-    const dateArr = qs('s_dateArr').value || trainDateEl.value || currentReport.sectionA.date || '';
-    const dateDep = qs('s_dateDep').value || trainDateEl.value || currentReport.sectionA.date || '';
-    const planArr = qs('s_planArr').value.trim();
-    const planDep = qs('s_planDep').value.trim();
-    const realArr = qs('s_realArr').value.trim();
-    const realDep = qs('s_realDep').value.trim();
-    const delayReason = qs('s_delayReason').value.trim();
-    const writtenOrders = qs('s_writtenOrders').value.trim();
-    if (!station) return alert('Nazwa stacji jest wymagana.');
-    if (!isValidTime(planArr) || !isValidTime(planDep) || !isValidTime(realArr) || !isValidTime(realDep)) {
-      return alert('Czas musi być w formacie HH:MM (00:00–23:59) lub pole może być puste.');
+    try {
+      const station = qs('s_station').value.trim();
+      const dateArr = qs('s_dateArr').value || trainDateEl.value || currentReport.sectionA.date || '';
+      const dateDep = qs('s_dateDep').value || trainDateEl.value || currentReport.sectionA.date || '';
+      const planArr = qs('s_planArr').value.trim();
+      const planDep = qs('s_planDep').value.trim();
+      const realArr = qs('s_realArr').value.trim();
+      const realDep = qs('s_realDep').value.trim();
+      const delayReason = qs('s_delayReason').value.trim();
+      const writtenOrders = qs('s_writtenOrders').value.trim();
+      if (!station) return alert('Nazwa stacji jest wymagana.');
+      if (!isValidTime(planArr) || !isValidTime(planDep) || !isValidTime(realArr) || !isValidTime(realDep)) {
+        return alert('Czas musi być w formacie HH:MM (00:00–23:59) lub pole może być puste.');
+      }
+
+      const planArrDT = parseDateTime(dateArr, planArr, currentReport.sectionA.date);
+      const realArrDT = parseDateTime(dateArr, realArr, currentReport.sectionA.date);
+      const planDepDT = parseDateTime(dateDep, planDep, currentReport.sectionA.date);
+      const realDepDT = parseDateTime(dateDep, realDep, currentReport.sectionA.date);
+
+      let delayArrMinutes = null;
+      if (planArrDT && realArrDT) delayArrMinutes = Math.round((realArrDT - planArrDT)/60000);
+
+      let delayDepMinutes = null;
+      if (planDepDT && realDepDT) delayDepMinutes = Math.round((realDepDT - planDepDT)/60000);
+
+      let realStopMinutes = null;
+      if (realArrDT && realDepDT) realStopMinutes = Math.round((realDepDT - realArrDT)/60000);
+
+      if (!stationsSet.has(station)) {
+        stationsSet.add(station);
+        populateStationsDatalist(Array.from(stationsSet));
+      }
+
+      const mode = formStation.getAttribute('data-mode');
+      const entry = {
+        station, dateArr, dateDep,
+        planArr, planDep, realArr, realDep,
+        delayArrMinutes, delayDepMinutes, realStopMinutes,
+        delayReason, writtenOrders
+      };
+      if (mode === 'edit') {
+        const idx = Number(formStation.getAttribute('data-index'));
+        currentReport.sectionE[idx] = entry;
+      } else {
+        currentReport.sectionE.push(entry);
+      }
+      await saveAndRender();
+      formStation.reset();
+      closeModalSafe('modalStation');
+    } catch (err) {
+      console.error('Station submit error:', err);
+      alert('Błąd podczas zapisu wpisu stacji: ' + (err.message || err));
+      closeModalSafe('modalStation');
     }
-
-    const planArrDT = parseDateTime(dateArr, planArr, currentReport.sectionA.date);
-    const realArrDT = parseDateTime(dateArr, realArr, currentReport.sectionA.date);
-    const planDepDT = parseDateTime(dateDep, planDep, currentReport.sectionA.date);
-    const realDepDT = parseDateTime(dateDep, realDep, currentReport.sectionA.date);
-
-    let delayArrMinutes = null;
-    if (planArrDT && realArrDT) delayArrMinutes = Math.round((realArrDT - planArrDT)/60000);
-
-    let delayDepMinutes = null;
-    if (planDepDT && realDepDT) delayDepMinutes = Math.round((realDepDT - planDepDT)/60000);
-
-    let realStopMinutes = null;
-    if (realArrDT && realDepDT) realStopMinutes = Math.round((realDepDT - realArrDT)/60000);
-
-    if (!stationsSet.has(station)) {
-      stationsSet.add(station);
-      populateStationsDatalist(Array.from(stationsSet));
-    }
-
-    const mode = formStation.getAttribute('data-mode');
-    const entry = {
-      station, dateArr, dateDep,
-      planArr, planDep, realArr, realDep,
-      delayArrMinutes, delayDepMinutes, realStopMinutes,
-      delayReason, writtenOrders
-    };
-    if (mode === 'edit') {
-      const idx = Number(formStation.getAttribute('data-index'));
-      currentReport.sectionE[idx] = entry;
-    } else {
-      currentReport.sectionE.push(entry);
-    }
-    formStation.reset();
-    const m = bootstrap.Modal.getInstance(qs('modalStation'));
-    m && m.hide();
-    await saveAndRender();
   });
 
-  /* ---------- Section F (Control) ---------- */
+  /* ===========================
+     Sekcja F - Kontrole
+     =========================== */
   function renderControlRow(item, idx) {
     const div = document.createElement('div');
     div.className = 'station-row d-flex justify-content-between align-items-center';
@@ -535,28 +597,36 @@ document.addEventListener('DOMContentLoaded', () => {
     div.querySelector('[data-edit]').addEventListener('click', () => openEditModal('control', idx));
     return div;
   }
+
   on(formControl, 'submit', async (e) => {
     e.preventDefault();
-    const by = qs('f_by').value.trim();
-    const id = qs('f_id').value.trim();
-    const desc = qs('f_desc').value.trim();
-    const notes = qs('f_notes').value.trim();
-    if (!by) return alert('Imię i nazwisko kontrolującego jest wymagane.');
-    const mode = formControl.getAttribute('data-mode');
-    const entry = { by, id, desc, notes };
-    if (mode === 'edit') {
-      const idx = Number(formControl.getAttribute('data-index'));
-      currentReport.sectionF[idx] = entry;
-    } else {
-      currentReport.sectionF.push(entry);
+    try {
+      const by = qs('f_by').value.trim();
+      const id = qs('f_id').value.trim();
+      const desc = qs('f_desc').value.trim();
+      const notes = qs('f_notes').value.trim();
+      if (!by) return alert('Imię i nazwisko kontrolującego jest wymagane.');
+      const mode = formControl.getAttribute('data-mode');
+      const entry = { by, id, desc, notes };
+      if (mode === 'edit') {
+        const idx = Number(formControl.getAttribute('data-index'));
+        currentReport.sectionF[idx] = entry;
+      } else {
+        currentReport.sectionF.push(entry);
+      }
+      await saveAndRender();
+      formControl.reset();
+      closeModalSafe('modalControl');
+    } catch (err) {
+      console.error('Control submit error:', err);
+      alert('Błąd podczas zapisu kontroli: ' + (err.message || err));
+      closeModalSafe('modalControl');
     }
-    formControl.reset();
-    const m = bootstrap.Modal.getInstance(qs('modalControl'));
-    m && m.hide();
-    await saveAndRender();
   });
 
-  /* ---------- Section G (Notes) ---------- */
+  /* ===========================
+     Sekcja G - Uwagi
+     =========================== */
   function renderNoteRow(item, idx) {
     const div = document.createElement('div');
     div.className = 'station-row d-flex justify-content-between align-items-center';
@@ -573,25 +643,33 @@ document.addEventListener('DOMContentLoaded', () => {
     div.querySelector('[data-edit]').addEventListener('click', () => openEditModal('note', idx));
     return div;
   }
+
   on(formNote, 'submit', async (e) => {
     e.preventDefault();
-    const text = qs('n_text').value.trim();
-    if (!text) return alert('Treść uwagi jest wymagana.');
-    const mode = formNote.getAttribute('data-mode');
-    const entry = { text };
-    if (mode === 'edit') {
-      const idx = Number(formNote.getAttribute('data-index'));
-      currentReport.sectionG[idx] = entry;
-    } else {
-      currentReport.sectionG.push(entry);
+    try {
+      const text = qs('n_text').value.trim();
+      if (!text) return alert('Treść uwagi jest wymagana.');
+      const mode = formNote.getAttribute('data-mode');
+      const entry = { text };
+      if (mode === 'edit') {
+        const idx = Number(formNote.getAttribute('data-index'));
+        currentReport.sectionG[idx] = entry;
+      } else {
+        currentReport.sectionG.push(entry);
+      }
+      await saveAndRender();
+      formNote.reset();
+      closeModalSafe('modalNote');
+    } catch (err) {
+      console.error('Note submit error:', err);
+      alert('Błąd podczas zapisu uwagi: ' + (err.message || err));
+      closeModalSafe('modalNote');
     }
-    formNote.reset();
-    const m = bootstrap.Modal.getInstance(qs('modalNote'));
-    m && m.hide();
-    await saveAndRender();
   });
 
-  /* ---------- Edit modal helper ---------- */
+  /* ===========================
+     Helper: edycja wpisów (otwieranie modali z danymi)
+     =========================== */
   function openEditModal(type, idx) {
     if (!currentReport) return;
     if (type === 'traction') {
@@ -657,7 +735,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  /* ---------- Reset modals on close ---------- */
+  /* ---------- Reset modali po zamknięciu (przywrócenie trybu add) ---------- */
   document.querySelectorAll('.modal').forEach(m => {
     m.addEventListener('hidden.bs.modal', () => {
       const form = m.querySelector('form');
@@ -669,7 +747,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  /* ---------- Save & autosave ---------- */
+  /* ===========================
+     Save & autosave
+     =========================== */
   async function saveAndRender() {
     if (!currentReport) return;
     currentReport.lastEditedAt = new Date().toISOString();
@@ -691,7 +771,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  /* ---------- Export / Import JSON (report panel) ---------- */
+  /* ===========================
+     Export / Import JSON (panel raportu)
+     =========================== */
   on(exportJsonBtn, 'click', () => {
     if (!currentReport) return alert('Brak otwartego raportu.');
     const dataStr = JSON.stringify(currentReport, null, 2);
@@ -723,7 +805,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  /* ---------- PDF export (A4) ---------- */
+  /* ===========================
+     PDF (A4) — generowanie widoku do eksportu
+     =========================== */
   on(previewPdfBtn, 'click', async () => {
     if (!currentReport) return alert('Brak otwartego raportu.');
     const container = document.createElement('div');
@@ -873,8 +957,9 @@ document.addEventListener('DOMContentLoaded', () => {
     await exportPdf(container, filename);
   });
 
-  /* ---------- Init: nothing open yet ---------- */
-  // ensure start panel visible
+  /* ===========================
+     Inicjalizacja widoku startowego
+     =========================== */
   startPanel.style.display = 'block';
   reportPanel.style.display = 'none';
 });
