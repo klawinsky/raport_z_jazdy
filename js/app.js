@@ -28,6 +28,16 @@ function isValidTime(t) {
   if (!t) return true; // empty allowed
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(t);
 }
+function formatDelayClass(value) {
+  if (value == null) return 'delay-zero';
+  if (value > 0) return 'delay-pos';
+  if (value < 0) return 'delay-neg';
+  return 'delay-zero';
+}
+function formatDelayText(value) {
+  if (value == null) return '-';
+  return `${value} min`;
+}
 
 /* ---------- Autocomplete (lista stacji) ---------- */
 const sampleStations = [
@@ -36,6 +46,7 @@ const sampleStations = [
 ];
 function populateStationsDatalist(list) {
   const dl = document.getElementById('stationsDatalist');
+  if (!dl) return;
   dl.innerHTML = '';
   list.forEach(s => {
     const opt = document.createElement('option');
@@ -134,6 +145,9 @@ takeReportBtn.addEventListener('click', async () => {
   rep.currentDriver = currentUser;
   rep.lastEditedAt = new Date().toISOString();
   currentReport = rep;
+  // update stations set from imported report
+  (rep.sectionE || []).forEach(s => { if (s.station) stationsSet.add(s.station); });
+  populateStationsDatalist(Array.from(stationsSet));
   await saveReport(currentReport);
   openReportUI();
 });
@@ -228,6 +242,10 @@ formTraction.addEventListener('submit', async (e) => {
   } else {
     currentReport.sectionB.push({ name, id, zdp, loco, from, to });
   }
+  // add stations to datalist
+  if (from) stationsSet.add(from);
+  if (to) stationsSet.add(to);
+  populateStationsDatalist(Array.from(stationsSet));
   formTraction.reset();
   const modal = bootstrap.Modal.getInstance(document.getElementById('modalTraction'));
   modal.hide();
@@ -240,7 +258,7 @@ function renderConductorRow(item, idx) {
   div.className = 'd-flex justify-content-between align-items-center station-row';
   div.innerHTML = `
     <div>
-      <strong>${item.name}</strong> (${item.id}) - ZDP: ${item.zdp} - Funkcja: ${item.role}
+      <strong>${item.name}</strong> (${item.id}) - ZDP: ${item.zdp} - Funkcja: ${item.role} [${item.from || '-'} → ${item.to || '-'}]
     </div>
     <div>
       <button class="btn btn-sm btn-outline-secondary btn-edit me-1" data-idx="${idx}" data-type="conductor">Edytuj</button>
@@ -261,14 +279,19 @@ formConductor.addEventListener('submit', async (e) => {
   const id = document.getElementById('c_id').value.trim();
   const zdp = document.getElementById('c_zdp').value;
   const role = document.getElementById('c_role').value;
+  const from = document.getElementById('c_from').value.trim();
+  const to = document.getElementById('c_to').value.trim();
   if (!name || !id) return alert('Imię i numer są wymagane.');
   const mode = formConductor.getAttribute('data-mode');
   if (mode === 'edit') {
     const idx = Number(formConductor.getAttribute('data-index'));
-    currentReport.sectionC[idx] = { name, id, zdp, role };
+    currentReport.sectionC[idx] = { name, id, zdp, role, from, to };
   } else {
-    currentReport.sectionC.push({ name, id, zdp, role });
+    currentReport.sectionC.push({ name, id, zdp, role, from, to });
   }
+  if (from) stationsSet.add(from);
+  if (to) stationsSet.add(to);
+  populateStationsDatalist(Array.from(stationsSet));
   formConductor.reset();
   const modal = bootstrap.Modal.getInstance(document.getElementById('modalConductor'));
   modal.hide();
@@ -279,9 +302,10 @@ formConductor.addEventListener('submit', async (e) => {
 function renderOrderRow(item, idx) {
   const div = document.createElement('div');
   div.className = 'd-flex justify-content-between align-items-center station-row';
+  const meta = `${item.number ? 'Nr: ' + item.number + ' · ' : ''}${item.time ? 'Godz.: ' + item.time : ''}`;
   div.innerHTML = `
     <div>
-      ${item.text} <div class="small text-muted">Źródło: ${item.source}</div>
+      ${item.text} <div class="small text-muted">${meta} · Źródło: ${item.source}</div>
     </div>
     <div>
       <button class="btn btn-sm btn-outline-secondary btn-edit me-1" data-idx="${idx}" data-type="order">Edytuj</button>
@@ -298,15 +322,18 @@ function renderOrderRow(item, idx) {
 /* Formularz Order */
 formOrder.addEventListener('submit', async (e) => {
   e.preventDefault();
+  const number = document.getElementById('o_number').value.trim();
+  const time = document.getElementById('o_time').value.trim();
   const text = document.getElementById('o_text').value.trim();
   const source = document.getElementById('o_source').value;
   if (!text) return alert('Treść dyspozycji jest wymagana.');
+  if (!isValidTime(time)) return alert('Godzina musi być w formacie HH:MM lub pusta.');
   const mode = formOrder.getAttribute('data-mode');
   if (mode === 'edit') {
     const idx = Number(formOrder.getAttribute('data-index'));
-    currentReport.sectionD[idx] = { text, source };
+    currentReport.sectionD[idx] = { number, time, text, source };
   } else {
-    currentReport.sectionD.push({ text, source });
+    currentReport.sectionD.push({ number, time, text, source });
   }
   formOrder.reset();
   const modal = bootstrap.Modal.getInstance(document.getElementById('modalOrder'));
@@ -318,14 +345,19 @@ formOrder.addEventListener('submit', async (e) => {
 function renderStationRow(item, idx) {
   const div = document.createElement('div');
   div.className = 'station-row';
-  const delayText = item.delayMinutes != null ? `${item.delayMinutes} min` : '-';
+  const arrClass = formatDelayClass(item.delayArrMinutes);
+  const depClass = formatDelayClass(item.delayDepMinutes);
+  const arrText = formatDelayText(item.delayArrMinutes);
+  const depText = formatDelayText(item.delayDepMinutes);
   const stopText = item.realStopMinutes != null ? `${item.realStopMinutes} min` : '-';
   div.innerHTML = `
     <div class="d-flex justify-content-between">
       <div>
         <strong>${item.station}</strong>
         <div class="small text-muted">Plan: ${item.planArr || '-'} → ${item.planDep || '-'}; Real: ${item.realArr || '-'} → ${item.realDep || '-'}</div>
-        <div class="small">Opóźnienie/przyspieszenie: ${delayText}; Postój realny: ${stopText}</div>
+        <div class="small">Opóźnienie/przyspieszenie przyjazdu: <span class="${arrClass}">${arrText}</span></div>
+        <div class="small">Opóźnienie/przyspieszenie odjazdu: <span class="${depClass}">${depText}</span></div>
+        <div class="small">Postój realny: ${stopText}</div>
         <div class="small text-muted">Powód: ${item.delayReason || '-'}; Rozkazy pisemne: ${item.writtenOrders || '-'}</div>
       </div>
       <div>
@@ -358,9 +390,15 @@ formStation.addEventListener('submit', async (e) => {
   }
   const planArrMin = timeToMinutes(planArr);
   const realArrMin = timeToMinutes(realArr);
-  let delayMinutes = null;
-  if (planArrMin != null && realArrMin != null) delayMinutes = realArrMin - planArrMin;
+  const planDepMin = timeToMinutes(planDep);
   const realDepMin = timeToMinutes(realDep);
+
+  let delayArrMinutes = null;
+  if (planArrMin != null && realArrMin != null) delayArrMinutes = realArrMin - planArrMin;
+
+  let delayDepMinutes = null;
+  if (planDepMin != null && realDepMin != null) delayDepMinutes = realDepMin - planDepMin;
+
   let realStopMinutes = null;
   if (realArrMin != null && realDepMin != null) realStopMinutes = realDepMin - realArrMin;
 
@@ -373,7 +411,7 @@ formStation.addEventListener('submit', async (e) => {
   const mode = formStation.getAttribute('data-mode');
   const entry = {
     station, planArr, planDep, realArr, realDep,
-    delayMinutes, realStopMinutes, delayReason, writtenOrders
+    delayArrMinutes, delayDepMinutes, realStopMinutes, delayReason, writtenOrders
   };
   if (mode === 'edit') {
     const idx = Number(formStation.getAttribute('data-index'));
@@ -505,12 +543,16 @@ function openEditModal(type, idx) {
     document.getElementById('c_id').value = item.id;
     document.getElementById('c_zdp').value = item.zdp || 'WAW';
     document.getElementById('c_role').value = item.role || 'KP';
+    document.getElementById('c_from').value = item.from || '';
+    document.getElementById('c_to').value = item.to || '';
     formConductor.setAttribute('data-mode','edit');
     formConductor.setAttribute('data-index', idx);
     new bootstrap.Modal(document.getElementById('modalConductor')).show();
   } else if (type === 'order') {
     const item = currentReport.sectionD[idx];
-    document.getElementById('o_text').value = item.text;
+    document.getElementById('o_number').value = item.number || '';
+    document.getElementById('o_time').value = item.time || '';
+    document.getElementById('o_text').value = item.text || '';
     document.getElementById('o_source').value = item.source || 'Dyspozytura';
     formOrder.setAttribute('data-mode','edit');
     formOrder.setAttribute('data-index', idx);
@@ -590,7 +632,7 @@ importFile.addEventListener('change', async (e) => {
   }
 });
 
-/* ---------- PDF (czysty widok do druku) ---------- */
+/* ---------- PDF (czysty widok do druku, A4) ---------- */
 previewPdfBtn.addEventListener('click', async () => {
   if (!currentReport) return alert('Brak otwartego raportu.');
   const container = document.createElement('div');
@@ -642,7 +684,7 @@ previewPdfBtn.addEventListener('click', async () => {
   };
 
   container.appendChild(makeCrewTable('B - Drużyna trakcyjna', currentReport.sectionB, ['name','id','zdp','loco','from','to']));
-  container.appendChild(makeCrewTable('C - Drużyna konduktorska', currentReport.sectionC, ['name','id','zdp','role']));
+  container.appendChild(makeCrewTable('C - Drużyna konduktorska', currentReport.sectionC, ['name','id','zdp','role','from','to']));
 
   const secD = document.createElement('div');
   secD.className = 'section';
@@ -650,13 +692,12 @@ previewPdfBtn.addEventListener('click', async () => {
   if (currentReport.sectionD.length === 0) {
     secD.innerHTML += `<div>-</div>`;
   } else {
-    const ul = document.createElement('ol');
-    currentReport.sectionD.forEach(o => {
-      const li = document.createElement('li');
-      li.innerHTML = `<strong>${o.source}</strong>: ${o.text}`;
-      ul.appendChild(li);
-    });
-    secD.appendChild(ul);
+    const table = document.createElement('table');
+    table.className = 'table-print';
+    table.innerHTML = `<thead><tr><th>Nr</th><th>Godz.</th><th>Treść</th><th>Źródło</th></tr></thead><tbody>${
+      currentReport.sectionD.map(o => `<tr><td>${o.number || '-'}</td><td>${o.time || '-'}</td><td>${o.text}</td><td>${o.source || '-'}</td></tr>`).join('')
+    }</tbody>`;
+    secD.appendChild(table);
   }
   container.appendChild(secD);
 
@@ -670,26 +711,35 @@ previewPdfBtn.addEventListener('click', async () => {
       <tr>
         <th>Stacja</th>
         <th>Plan przyjazd</th>
-        <th>Plan odjazd</th>
         <th>Real przyjazd</th>
+        <th>Opóźnienie/przyspieszenie przyjazdu</th>
+        <th>Plan odjazd</th>
         <th>Real odjazd</th>
-        <th>Opóźnienie (min)</th>
+        <th>Opóźnienie/przyspieszenie odjazdu</th>
         <th>Postój realny (min)</th>
         <th>Powód / Rozkazy</th>
       </tr>
     </thead>
     <tbody>
-      ${currentReport.sectionE.length === 0 ? `<tr><td colspan="8">-</td></tr>` : currentReport.sectionE.map(s => `
-        <tr>
+      ${currentReport.sectionE.length === 0 ? `<tr><td colspan="9">-</td></tr>` : currentReport.sectionE.map(s => {
+        const arrVal = (s.delayArrMinutes != null) ? `${s.delayArrMinutes} min` : '-';
+        const depVal = (s.delayDepMinutes != null) ? `${s.delayDepMinutes} min` : '-';
+        const arrClass = s.delayArrMinutes == null ? '' : (s.delayArrMinutes > 0 ? 'color:red;font-weight:600;' : (s.delayArrMinutes < 0 ? 'color:green;font-weight:600;' : 'color:black;font-weight:600;'));
+        const depClass = s.delayDepMinutes == null ? '' : (s.delayDepMinutes > 0 ? 'color:red;font-weight:600;' : (s.delayDepMinutes < 0 ? 'color:green;font-weight:600;' : 'color:black;font-weight:600;'));
+        const stop = s.realStopMinutes != null ? `${s.realStopMinutes}` : '-';
+        const pow = (s.delayReason || '-') + (s.writtenOrders ? ' / ' + s.writtenOrders : '');
+        return `<tr>
           <td>${s.station || '-'}</td>
           <td>${s.planArr || '-'}</td>
-          <td>${s.planDep || '-'}</td>
           <td>${s.realArr || '-'}</td>
+          <td style="${arrClass}">${arrVal}</td>
+          <td>${s.planDep || '-'}</td>
           <td>${s.realDep || '-'}</td>
-          <td>${s.delayMinutes != null ? s.delayMinutes : '-'}</td>
-          <td>${s.realStopMinutes != null ? s.realStopMinutes : '-'}</td>
-          <td>${(s.delayReason || '-') + (s.writtenOrders ? ' / ' + s.writtenOrders : '')}</td>
-        </tr>`).join('')}
+          <td style="${depClass}">${depVal}</td>
+          <td>${stop}</td>
+          <td>${pow}</td>
+        </tr>`;
+      }).join('')}
     </tbody>`;
   secE.appendChild(tableE);
   container.appendChild(secE);
