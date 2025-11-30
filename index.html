@@ -152,7 +152,7 @@
   <!-- Modal: Traction (Sekcja B) -->
   <div class="modal fade" id="modalTraction" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
-      <form id="formTraction" class="modal-content">
+      <form id="formTraction" class="modal-content" data-mode="add" data-index="">
         <div class="modal-header">
           <h5 class="modal-title">Dodaj pracownika drużyny trakcyjnej</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
@@ -172,7 +172,7 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="submit" class="btn btn-primary">Dodaj</button>
+          <button type="submit" class="btn btn-primary">Zapisz</button>
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
         </div>
       </form>
@@ -182,7 +182,7 @@
   <!-- Modal: Conductor (Sekcja C) -->
   <div class="modal fade" id="modalConductor" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
-      <form id="formConductor" class="modal-content">
+      <form id="formConductor" class="modal-content" data-mode="add" data-index="">
         <div class="modal-header">
           <h5 class="modal-title">Dodaj pracownika drużyny konduktorskiej</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
@@ -202,7 +202,7 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="submit" class="btn btn-primary">Dodaj</button>
+          <button type="submit" class="btn btn-primary">Zapisz</button>
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
         </div>
       </form>
@@ -212,7 +212,7 @@
   <!-- Modal: Order (Sekcja D) -->
   <div class="modal fade" id="modalOrder" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
-      <form id="formOrder" class="modal-content">
+      <form id="formOrder" class="modal-content" data-mode="add" data-index="">
         <div class="modal-header">
           <h5 class="modal-title">Dodaj dyspozycję</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
@@ -226,7 +226,7 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button type="submit" class="btn btn-primary">Dodaj</button>
+          <button type="submit" class="btn btn-primary">Zapisz</button>
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
         </div>
       </form>
@@ -236,13 +236,16 @@
   <!-- Modal: Station (Sekcja E) -->
   <div class="modal fade" id="modalStation" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
-      <form id="formStation" class="modal-content">
+      <form id="formStation" class="modal-content" data-mode="add" data-index="">
         <div class="modal-header">
           <h5 class="modal-title">Dodaj wpis stacji</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
         </div>
         <div class="modal-body">
-          <div class="mb-2"><label class="form-label">Nazwa stacji</label><input id="s_station" class="form-control" required></div>
+          <div class="mb-2"><label class="form-label">Nazwa stacji</label>
+            <input id="s_station" class="form-control" list="stationsDatalist" required>
+            <datalist id="stationsDatalist"></datalist>
+          </div>
           <div class="row g-2">
             <div class="col"><label class="form-label">Planowy przyjazd (HH:MM)</label><input id="s_planArr" class="form-control" placeholder="12:45"></div>
             <div class="col"><label class="form-label">Planowy odjazd (HH:MM)</label><input id="s_planDep" class="form-control" placeholder="12:55"></div>
@@ -253,9 +256,10 @@
           </div>
           <div class="mb-2 mt-2"><label class="form-label">Powód opóźnienia</label><input id="s_delayReason" class="form-control"></div>
           <div class="mb-2"><label class="form-label">Rozkazy pisemne</label><input id="s_writtenOrders" class="form-control"></div>
+          <div class="small text-muted mt-1">Czas musi być w formacie HH:MM (np. 09:05). Puste pola są dozwolone.</div>
         </div>
         <div class="modal-footer">
-          <button type="submit" class="btn btn-primary">Dodaj</button>
+          <button type="submit" class="btn btn-primary">Zapisz</button>
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
         </div>
       </form>
@@ -265,7 +269,7 @@
   <!-- Modal: Control (Sekcja F) -->
   <div class="modal fade" id="modalControl" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
-      <form id="formControl" class="modal-content">
+      <form id="formControl" class="modal-content" data-mode="add" data-index="">
         <div class="modal-header">
           <h5 class="modal-title">Dodaj kontrolę pociągu</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
@@ -277,7 +281,7 @@
           <div class="mb-2"><label class="form-label">Uwagi</label><input id="f_notes" class="form-control"></div>
         </div>
         <div class="modal-footer">
-          <button type="submit" class="btn btn-primary">Dodaj</button>
+          <button type="submit" class="btn btn-primary">Zapisz</button>
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
         </div>
       </form>
@@ -287,7 +291,7 @@
   <!-- Modal: Note (Sekcja G) -->
   <div class="modal fade" id="modalNote" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
-      <form id="formNote" class="modal-content">
+      <form id="formNote" class="modal-content" data-mode="add" data-index="">
         <div class="modal-header">
           <h5 class="modal-title">Dodaj uwagę kierownika</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
@@ -296,7 +300,7 @@
           <div class="mb-2"><label class="form-label">Treść uwagi</label><textarea id="n_text" class="form-control" rows="3" required></textarea></div>
         </div>
         <div class="modal-footer">
-          <button type="submit" class="btn btn-primary">Dodaj</button>
+          <button type="submit" class="btn btn-primary">Zapisz</button>
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Anuluj</button>
         </div>
       </form>
