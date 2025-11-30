@@ -1,5 +1,5 @@
 // js/app.js
-// Kompletny, samodzielny plik aplikacji — wklej zamiast starego app.js
+// Kompletny plik aplikacji — wklej zamiast starego app.js
 
 import { saveReport, getReport, nextCounter } from './db.js';
 import { exportPdf } from './pdf.js';
@@ -18,26 +18,28 @@ function qs(id) { return document.getElementById(id); }
 function on(el, ev, fn) { if (!el) return; el.addEventListener(ev, fn); }
 function safeText(v) { return (v === undefined || v === null || v === '') ? '-' : v; }
 
-// Bezpieczne zamykanie modala i usuwanie backdrop
+// Odporne zamykanie modala i przywracanie przewijania
 function closeModalSafe(modalId) {
   try {
     const modalEl = document.getElementById(modalId);
     if (modalEl) {
       const inst = bootstrap.Modal.getInstance(modalEl);
-      if (inst) inst.hide();
-      else {
-        // jeśli nie ma instancji, utwórz tymczasową i zamknij
-        const tmp = new bootstrap.Modal(modalEl);
-        tmp.hide();
+      if (inst) {
+        try { inst.hide(); } catch (e) { console.warn('hide() error', e); }
+      } else {
+        try { new bootstrap.Modal(modalEl).hide(); } catch (e) { console.warn('tmp modal hide error', e); }
       }
       modalEl.setAttribute('aria-hidden', 'true');
     }
   } catch (err) {
     console.error('closeModalSafe error:', err);
   } finally {
-    // zawsze usuń pozostałości
+    // zawsze usuń pozostałości i przywróć przewijanie
     document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
     document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.documentElement.style.overflow = '';
   }
 }
 
