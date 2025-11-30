@@ -37,8 +37,10 @@ body { background:#f8f9fa; }
 /* footer */
 .print-footer { font-size:11px; color:#444; text-align:right; margin-top:6mm; }
 
-/* hide interactive elements if accidentally included */
-button, input, .no-print { display:none !important; }
+/* hide interactive elements only in print view */
+@media print {
+  button, input, .no-print { display: none !important; }
+}
 
 /* page break helpers */
 .page-break { page-break-after: always; }
