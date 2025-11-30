@@ -1,48 +1,25 @@
-// db.js
-import { openDB } from 'https://cdn.jsdelivr.net/npm/idb@8/+esm';
+// js/db.js
+// Proste API oparte na localStorage: saveReport, getReport, nextCounter
 
-const DB_NAME = 'erj-db';
-const DB_VERSION = 1;
-const REPORT_STORE = 'reports';
-const META_STORE = 'meta';
-
-export const dbPromise = openDB(DB_NAME, DB_VERSION, {
-  upgrade(db) {
-    if (!db.objectStoreNames.contains(REPORT_STORE)) {
-      db.createObjectStore(REPORT_STORE, { keyPath: 'number' });
-    }
-    if (!db.objectStoreNames.contains(META_STORE)) {
-      db.createObjectStore(META_STORE, { keyPath: 'key' });
-    }
-  }
-});
+const STORAGE_KEY_PREFIX = 'erj_report_';
+const COUNTER_KEY = 'erj_counter';
 
 export async function saveReport(report) {
-  const db = await dbPromise;
-  await db.put(REPORT_STORE, report);
+  if (!report || !report.number) throw new Error('Brak numeru raportu');
+  localStorage.setItem(STORAGE_KEY_PREFIX + report.number, JSON.stringify(report));
+  return true;
 }
 
 export async function getReport(number) {
-  const db = await dbPromise;
-  return db.get(REPORT_STORE, number);
-}
-
-export async function deleteReport(number) {
-  const db = await dbPromise;
-  return db.delete(REPORT_STORE, number);
-}
-
-export async function listReports() {
-  const db = await dbPromise;
-  return db.getAll(REPORT_STORE);
+  const raw = localStorage.getItem(STORAGE_KEY_PREFIX + number);
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch (e) { return null; }
 }
 
 export async function nextCounter() {
-  const db = await dbPromise;
-  const key = 'counter';
-  let meta = await db.get(META_STORE, key);
-  if (!meta) meta = { key, value: 0 };
-  meta.value = (meta.value || 0) + 1;
-  await db.put(META_STORE, meta);
-  return meta.value;
+  const raw = localStorage.getItem(COUNTER_KEY);
+  let n = raw ? Number(raw) : 0;
+  n = (isNaN(n) ? 0 : n) + 1;
+  localStorage.setItem(COUNTER_KEY, String(n));
+  return n;
 }
