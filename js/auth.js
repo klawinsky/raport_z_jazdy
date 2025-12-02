@@ -1,7 +1,6 @@
 // js/auth.js
 import { getUserByEmailOrId, seedAdminIfMissing, saveUser } from './db.js';
 
-// Utility: SHA-256 hashing for passwords (browser crypto.subtle)
 export async function hashPassword(password) {
   const enc = new TextEncoder();
   const data = enc.encode(password);
@@ -13,9 +12,7 @@ export async function hashPassword(password) {
 const AUTH_KEY = 'erj_current_user';
 
 export async function initAuth() {
-  // Seed admin account (password hashed)
-  // Administrator: Paweł Klawiński ID: 77144, ZDP: WAW, role: admin, email: klawinski.pawel@gmail.com
-  const adminPlain = 'Admin@77144'; // demo password (możesz zmienić)
+  const adminPlain = 'Admin@77144';
   const admin = {
     name: 'Paweł Klawiński',
     id: '77144',
@@ -43,7 +40,6 @@ export async function login(loginId, password) {
   if (user.status !== 'active') return { ok:false, reason:'Konto nieaktywne' };
   const hash = await hashPassword(password);
   if (hash !== user.passwordHash) return { ok:false, reason:'Nieprawidłowe hasło' };
-  // store minimal session
   const session = { email: user.email, id: user.id, name: user.name, role: user.role, zdp: user.zdp, loggedAt: new Date().toISOString() };
   localStorage.setItem(AUTH_KEY, JSON.stringify(session));
   return { ok:true, user: session };
