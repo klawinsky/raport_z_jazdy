@@ -1,9 +1,6 @@
 // js/app.js
 import { listUsers, saveUser, getUserByEmailOrId, updateUser, deleteUser } from './db.js';
-import { initAuth, registerUser, login, logout, currentUser } from './auth.js';
-
-// Import or reuse existing report functions if present (not duplicated here).
-// This file handles UI, login flow, admin panel and integrates with existing report code.
+import { initAuth, registerUser, login, logout, currentUser, hashPassword } from './auth.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Init auth and seed admin
@@ -29,7 +26,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const formUser = document.getElementById('formUser');
   const userFormMsg = document.getElementById('userFormMsg');
 
-  // Simple helper
+  // Helpers
   function showLoginError(msg) { loginMsg.textContent = msg || ''; }
   function showUserFormError(msg) { userFormMsg.textContent = msg || ''; }
 
@@ -38,11 +35,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     loginView.style.display = 'none';
     appShell.style.display = 'block';
     loggedUserInfo.textContent = `${user.name} (${user.id}) · ${user.role}`;
-    // show admin panel only for admins
     if (user.role === 'admin') adminPanel.style.display = 'block';
     else adminPanel.style.display = 'none';
-    // initialize other app parts (reports) if needed
-    // e.g., initReportsUI(user);
     refreshUsersTable();
   }
 
@@ -62,7 +56,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     showAppFor(res.user);
   });
 
-  // Demo button: autofill admin credentials (for convenience)
+  // Demo button: autofill admin credentials
   demoBtn.addEventListener('click', () => {
     loginId.value = 'klawinski.pawel@gmail.com';
     loginPassword.value = adminPlain;
@@ -99,7 +93,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Open add user modal
+  // Add / Edit user modal submit
   formUser.addEventListener('submit', async (e) => {
     e.preventDefault();
     showUserFormError('');
@@ -117,13 +111,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (mode === 'add') {
         await registerUser({ name, id, zdp, email, password, role, status });
       } else {
-        // edit: update user (password will be replaced)
-        const passwordHash = await (await import('./auth.js')).hashPassword(password).catch(()=>null);
+        // edit: update user (if password provided, replace hash)
         const patch = { name, id, zdp, email, role, status };
-        if (passwordHash) patch.passwordHash = passwordHash;
+        if (password) patch.passwordHash = await hashPassword(password);
         await updateUser(idx, patch);
       }
-      // close modal
       const bs = bootstrap.Modal.getInstance(modalUser);
       bs && bs.hide();
       formUser.reset();
@@ -140,7 +132,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const action = btn.getAttribute('data-action');
     const key = btn.getAttribute('data-key');
     if (action === 'edit') {
-      // load user and open modal in edit mode
       const u = await getUserByEmailOrId(key);
       if (!u) return alert('Nie znaleziono użytkownika');
       formUser.setAttribute('data-mode','edit');
@@ -182,14 +173,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await refreshUsersTable();
   });
 
-  // small helper to expose registerUser for formUser
-  async function registerUser(data) {
-    // use auth.registerUser
-    const auth = await import('./auth.js');
-    return auth.registerUser(data);
-  }
-
-  // Expose some functions globally if needed by other modules
+  // Expose some functions globally if needed
   window.appAuth = { refreshUsersTable, currentUser: currentUser };
 
 });
