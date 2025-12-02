@@ -1,6 +1,7 @@
 // js/db.js
 // Proste API oparte na localStorage: saveReport, getReport, nextCounter
 // + user management: saveUser, getUserByEmailOrId, listUsers, updateUser, deleteUser
+
 const STORAGE_KEY_PREFIX = 'erj_report_';
 const COUNTER_KEY = 'erj_counter';
 const USERS_KEY = 'erj_users';
@@ -42,7 +43,7 @@ export async function listUsers() {
 export async function saveUser(user) {
   if (!user || (!user.email && !user.id)) throw new Error('Nieprawidłowe dane użytkownika');
   const arr = _readUsers();
-  const idx = arr.findIndex(u => u.email === user.email || u.id === user.id);
+  const idx = arr.findIndex(u => (u.email && u.email.toLowerCase() === (user.email||'').toLowerCase()) || (u.id && String(u.id) === String(user.id)));
   if (idx >= 0) { arr[idx] = { ...arr[idx], ...user, updatedAt: new Date().toISOString() }; }
   else { arr.push({ ...user, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }); }
   _writeUsers(arr);
@@ -52,7 +53,7 @@ export async function saveUser(user) {
 export async function getUserByEmailOrId(login) {
   if (!login) return null;
   const arr = _readUsers();
-  return arr.find(u => (u.email && u.email.toLowerCase() === login.toLowerCase()) || (u.id && String(u.id) === String(login))) || null;
+  return arr.find(u => (u.email && u.email.toLowerCase() === (login||'').toLowerCase()) || (u.id && String(u.id) === String(login))) || null;
 }
 
 export async function updateUser(emailOrId, patch) {
