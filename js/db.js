@@ -15,6 +15,13 @@ export async function getReport(number) {
   try { return JSON.parse(raw); } catch (e) { return null; }
 }
 
+export async function listReports() {
+  const keys = Object.keys(localStorage).filter(k => k.startsWith(STORAGE_KEY_PREFIX));
+  return keys.map(k => {
+    try { return JSON.parse(localStorage.getItem(k)); } catch(e){ return null; }
+  }).filter(Boolean);
+}
+
 export async function nextCounter() {
   const raw = localStorage.getItem(COUNTER_KEY);
   let n = raw ? Number(raw) : 0;
