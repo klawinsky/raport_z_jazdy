@@ -1,9 +1,9 @@
 // js/app.js
-import { listUsers, saveUser, getUserByEmailOrId, updateUser, deleteUser } from './db.js';
+import { listUsers, getUserByEmailOrId, updateUser, deleteUser } from './db.js';
 import { initAuth, registerUser, login, logout, currentUser, hashPassword } from './auth.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Init auth and seed admin
+  // Seed admin and get demo password
   const adminPlain = await initAuth();
 
   // UI refs
@@ -26,11 +26,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   const formUser = document.getElementById('formUser');
   const userFormMsg = document.getElementById('userFormMsg');
 
-  // Helpers
-  function showLoginError(msg) { loginMsg.textContent = msg || ''; }
-  function showUserFormError(msg) { userFormMsg.textContent = msg || ''; }
-
-  // If already logged in, show app
+  // Ensure initial visibility: show login unless session exists
+  function showLoginView() {
+    loginView.style.display = 'block';
+    appShell.style.display = 'none';
+    adminPanel.style.display = 'none';
+  }
   function showAppFor(user) {
     loginView.style.display = 'none';
     appShell.style.display = 'block';
@@ -40,11 +41,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     refreshUsersTable();
   }
 
-  // If session exists
+  // If session exists, show app; otherwise show login
   const sess = currentUser();
   if (sess) showAppFor(sess);
+  else showLoginView();
 
-  // Login form submit
+  // Helpers
+  function showLoginError(msg) { loginMsg.textContent = msg || ''; }
+  function showUserFormError(msg) { userFormMsg.textContent = msg || ''; }
+
+  // Login submit
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     showLoginError('');
@@ -56,7 +62,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     showAppFor(res.user);
   });
 
-  // Demo button: autofill admin credentials
+  // Demo button
   demoBtn.addEventListener('click', () => {
     loginId.value = 'klawinski.pawel@gmail.com';
     loginPassword.value = adminPlain;
@@ -66,8 +72,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Logout
   btnLogout.addEventListener('click', () => {
     logout();
-    appShell.style.display = 'none';
-    loginView.style.display = 'block';
+    showLoginView();
     loginId.value = ''; loginPassword.value = '';
     showLoginError('');
   });
@@ -111,7 +116,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (mode === 'add') {
         await registerUser({ name, id, zdp, email, password, role, status });
       } else {
-        // edit: update user (if password provided, replace hash)
         const patch = { name, id, zdp, email, role, status };
         if (password) patch.passwordHash = await hashPassword(password);
         await updateUser(idx, patch);
@@ -140,7 +144,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('u_id').value = u.id || '';
       document.getElementById('u_zdp').value = u.zdp || 'WAW';
       document.getElementById('u_email').value = u.email || '';
-      document.getElementById('u_password').value = ''; // require new password to change
+      document.getElementById('u_password').value = '';
       document.getElementById('u_role').value = u.role || 'user';
       document.getElementById('u_status').value = u.status || 'active';
       document.querySelector('#modalUser .modal-title').textContent = 'Edytuj użytkownika';
@@ -173,7 +177,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await refreshUsersTable();
   });
 
-  // Expose some functions globally if needed
+  // Expose helper for other modules if needed
   window.appAuth = { refreshUsersTable, currentUser: currentUser };
 
 });
