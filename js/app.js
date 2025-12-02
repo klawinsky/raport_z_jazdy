@@ -1,5 +1,5 @@
 // js/app.js
-import { listUsers, getUserByEmailOrId, updateUser, deleteUser } from './db.js';
+import { listUsers, getUserByEmailOrId, updateUser, deleteUser, saveReport, nextCounter, getReport } from './db.js';
 import { initAuth, registerUser, login, logout, currentUser, hashPassword } from './auth.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -26,6 +26,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   const formUser = document.getElementById('formUser');
   const userFormMsg = document.getElementById('userFormMsg');
 
+  // Report UI refs
+  const startPanel = document.getElementById('startPanel');
+  const newReportBtn = document.getElementById('newReportBtn');
+  const takeReportBtn = document.getElementById('takeReportBtn');
+  const userNameInput = document.getElementById('userName');
+  const userIdInput = document.getElementById('userId');
+  const reportPanel = document.getElementById('reportPanel');
+  const reportNumberEl = document.getElementById('reportNumber');
+  const currentUserEl = document.getElementById('currentUser');
+  const closeReportBtn = document.getElementById('closeReport');
+
   // Ensure initial visibility: show login unless session exists
   function showLoginView() {
     loginView.style.display = 'block';
@@ -38,6 +49,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     loggedUserInfo.textContent = `${user.name} (${user.id}) · ${user.role}`;
     if (user.role === 'admin') adminPanel.style.display = 'block';
     else adminPanel.style.display = 'none';
+    // prefill start panel inputs
+    userNameInput.value = user.name || '';
+    userIdInput.value = user.id || '';
     refreshUsersTable();
   }
 
@@ -175,6 +189,71 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!u || u.role !== 'admin') return alert('Brak uprawnień. Panel administracyjny dostępny tylko dla administratora.');
     adminPanel.scrollIntoView({ behavior: 'smooth' });
     await refreshUsersTable();
+  });
+
+  // ----------------- Raporty: create / take -----------------
+
+  // Create new report: uses nextCounter() and saves minimal report
+  async function createNewReport({ name, id }) {
+    if (!name || !id) return alert('Podaj imię i numer służbowy.');
+    const c = await nextCounter();
+    const d = new Date();
+    const DD = String(d.getDate()).padStart(2,'0');
+    const MM = String(d.getMonth()+1).padStart(2,'0');
+    const YY = String(d.getFullYear()).slice(-2);
+    const XXX = String(c).padStart(3,'0');
+    const number = `${XXX}/${DD}/${MM}/${YY}`;
+    const report = {
+      number,
+      createdAt: new Date().toISOString(),
+      createdBy: { name, id },
+      sectionA: { date: d.toISOString().slice(0,10) },
+      sectionB: [], sectionC: [], sectionD: [], sectionE: [], sectionF: [], sectionG: []
+    };
+    await saveReport(report);
+    openReport(report);
+  }
+
+  // Take over existing report by number (prompt)
+  async function takeReportByNumber({ name, id }) {
+    const num = prompt('Podaj numer raportu (np. 001/02/12/25):');
+    if (!num) return;
+    const rep = await getReport(num.trim());
+    if (!rep) return alert('Nie znaleziono raportu o podanym numerze.');
+    // mark takeover
+    rep.takenBy = { name, id, at: new Date().toISOString() };
+    await saveReport(rep);
+    openReport(rep);
+  }
+
+  // Open report UI and populate header
+  function openReport(report) {
+    if (!report) return;
+    reportPanel.style.display = 'block';
+    startPanel.style.display = 'none';
+    reportNumberEl.textContent = report.number || '-';
+    currentUserEl.textContent = `${report.createdBy?.name || '-'} (${report.createdBy?.id || '-'})`;
+    // scroll to report
+    reportPanel.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  // Close report
+  closeReportBtn.addEventListener('click', () => {
+    reportPanel.style.display = 'none';
+    startPanel.style.display = 'block';
+  });
+
+  // Wire buttons: newReportBtn and takeReportBtn
+  newReportBtn.addEventListener('click', async () => {
+    const name = userNameInput.value.trim() || (currentUser() && currentUser().name) || '';
+    const id = userIdInput.value.trim() || (currentUser() && currentUser().id) || '';
+    await createNewReport({ name, id });
+  });
+
+  takeReportBtn.addEventListener('click', async () => {
+    const name = userNameInput.value.trim() || (currentUser() && currentUser().name) || '';
+    const id = userIdInput.value.trim() || (currentUser() && currentUser().id) || '';
+    await takeReportByNumber({ name, id });
   });
 
   // Expose helper for other modules if needed
