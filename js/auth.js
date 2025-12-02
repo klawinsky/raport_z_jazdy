@@ -2,7 +2,7 @@
 import { getUserByEmailOrId, seedAdminIfMissing, saveUser } from './db.js';
 
 // Utility: SHA-256 hashing for passwords (browser crypto.subtle)
-async function hashPassword(password) {
+export async function hashPassword(password) {
   const enc = new TextEncoder();
   const data = enc.encode(password);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
@@ -14,6 +14,7 @@ const AUTH_KEY = 'erj_current_user';
 
 export async function initAuth() {
   // Seed admin account (password hashed)
+  // Administrator: Paweł Klawiński ID: 77144, ZDP: WAW, role: admin, email: klawinski.pawel@gmail.com
   const adminPlain = 'Admin@77144'; // demo password (możesz zmienić)
   const admin = {
     name: 'Paweł Klawiński',
@@ -22,12 +23,10 @@ export async function initAuth() {
     role: 'admin',
     status: 'active',
     email: 'klawinski.pawel@gmail.com',
-    // passwordHash will be set below
   };
   const hash = await hashPassword(adminPlain);
   admin.passwordHash = hash;
   await seedAdminIfMissing(admin);
-  // return adminPlain for demo login button if needed
   return adminPlain;
 }
 
