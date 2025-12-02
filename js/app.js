@@ -2,6 +2,17 @@
 import { listUsers, getUserByEmailOrId, updateUser, deleteUser, saveReport, nextCounter, getReport } from './db.js';
 import { initAuth, registerUser, login, logout, currentUser, hashPassword } from './auth.js';
 
+function debugShow(msg) {
+  try {
+    const el = document.getElementById('debugLog');
+    if (!el) return;
+    el.style.display = 'block';
+    el.textContent = msg;
+    clearTimeout(el._t);
+    el._t = setTimeout(()=>{ el.style.display='none'; }, 2500);
+  } catch(e){}
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   // Seed admin and get demo password
   const adminPlain = await initAuth();
@@ -193,7 +204,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ----------------- Raporty: create / take -----------------
 
-  // Create new report: uses nextCounter() and saves minimal report
   async function createNewReport({ name, id }) {
     if (!name || !id) return alert('Podaj imię i numer służbowy.');
     const c = await nextCounter();
@@ -214,46 +224,63 @@ document.addEventListener('DOMContentLoaded', async () => {
     openReport(report);
   }
 
-  // Take over existing report by number (prompt)
   async function takeReportByNumber({ name, id }) {
     const num = prompt('Podaj numer raportu (np. 001/02/12/25):');
     if (!num) return;
     const rep = await getReport(num.trim());
     if (!rep) return alert('Nie znaleziono raportu o podanym numerze.');
-    // mark takeover
     rep.takenBy = { name, id, at: new Date().toISOString() };
     await saveReport(rep);
     openReport(rep);
   }
 
-  // Open report UI and populate header
   function openReport(report) {
     if (!report) return;
     reportPanel.style.display = 'block';
     startPanel.style.display = 'none';
     reportNumberEl.textContent = report.number || '-';
     currentUserEl.textContent = `${report.createdBy?.name || '-'} (${report.createdBy?.id || '-'})`;
-    // scroll to report
     reportPanel.scrollIntoView({ behavior: 'smooth' });
+    debugShow('Otworzono raport: ' + (report.number || '-'));
   }
 
-  // Close report
   closeReportBtn.addEventListener('click', () => {
     reportPanel.style.display = 'none';
     startPanel.style.display = 'block';
+    debugShow('Zamknięto raport');
   });
 
-  // Wire buttons: newReportBtn and takeReportBtn
-  newReportBtn.addEventListener('click', async () => {
-    const name = userNameInput.value.trim() || (currentUser() && currentUser().name) || '';
-    const id = userIdInput.value.trim() || (currentUser() && currentUser().id) || '';
-    await createNewReport({ name, id });
-  });
-
-  takeReportBtn.addEventListener('click', async () => {
-    const name = userNameInput.value.trim() || (currentUser() && currentUser().name) || '';
-    const id = userIdInput.value.trim() || (currentUser() && currentUser().id) || '';
-    await takeReportByNumber({ name, id });
+  // --- KEY CHANGE: global delegation for start-panel buttons (robust) ---
+  document.body.addEventListener('click', async (e) => {
+    const t = e.target;
+    // new report
+    if (t.closest && t.closest('#newReportBtn')) {
+      e.preventDefault();
+      debugShow('Klik: Otwórz nowy raport');
+      const name = (userNameInput && userNameInput.value.trim()) || (currentUser() && currentUser().name) || '';
+      const id = (userIdInput && userIdInput.value.trim()) || (currentUser() && currentUser().id) || '';
+      await createNewReport({ name, id });
+      return;
+    }
+    // take report
+    if (t.closest && t.closest('#takeReportBtn')) {
+      e.preventDefault();
+      debugShow('Klik: Przejmij raport');
+      const name = (userNameInput && userNameInput.value.trim()) || (currentUser() && currentUser().name) || '';
+      const id = (userIdInput && userIdInput.value.trim()) || (currentUser() && currentUser().id) || '';
+      await takeReportByNumber({ name, id });
+      return;
+    }
+    // open admin
+    if (t.closest && t.closest('#openAdminBtn')) {
+      e.preventDefault();
+      debugShow('Klik: Panel administracyjny');
+      const u = currentUser();
+      if (!u || u.role !== 'admin') return alert('Brak uprawnień. Panel administracyjny dostępny tylko dla administratora.');
+      adminPanel.scrollIntoView({ behavior: 'smooth' });
+      await refreshUsersTable();
+      return;
+    }
   });
 
   // Expose helper for other modules if needed
