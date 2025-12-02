@@ -24,9 +24,12 @@ function createEmptyReport(number,user){ return { number, createdAt:new Date().t
 
 /* ---------- Main ---------- */
 document.addEventListener('DOMContentLoaded', () => {
+  // UI refs
   const startPanel=qs('startPanel'), reportPanel=qs('reportPanel');
   const newReportBtn=qs('newReportBtn'), takeReportBtn=qs('takeReportBtn'), importBtnStart=qs('importBtnStart'), importFileStart=qs('importFileStart');
-  const reportNumberEl=qs('reportNumber'), currentUserEl=qs('currentUser');
+
+  const reportNumberEl=qs('reportNumber'); const currentUserEl=qs('currentUser');
+
   const exportJsonBtn=qs('exportJson'), importBtn=qs('importBtn'), importFile=qs('importFile'), previewPdfBtn=qs('previewPdf'), closeReportBtn=qs('closeReport');
   const catEl=qs('cat'), tractionEl=qs('traction'), trainNumberEl=qs('trainNumber'), routeEl=qs('route'), trainDateEl=qs('trainDate');
   const tractionList=qs('tractionList'), conductorList=qs('conductorList'), ordersList=qs('ordersList'), stationsList=qs('stationsList'), controlsList=qs('controlsList'), notesList=qs('notesList');
@@ -36,23 +39,41 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentReport=null, currentUser=null; let stationsSet=new Set(sampleStations);
   populateStationsDatalist(Array.from(stationsSet));
 
-  window.createNewReport=async ({name,id}) => { currentUser={name,id}; const c=await nextCounter(); const d=new Date(); const {DD,MM,YY}=formatDateForNumber(d); const XXX=String(c).padStart(3,'0'); const number=`${XXX}/${DD}/${MM}/${YY}`; currentReport=createEmptyReport(number,currentUser); await saveReport(currentReport); openReportUI(); };
-  window.takeReportByNumber=async ({name,id}) => { currentUser={name,id}; const num=prompt('Podaj numer raportu w formacie XXX/DD/MM/YY'); if(!num) return; const rep=await getReport(num.trim()); if(!rep) return alert('Nie znaleziono raportu.'); rep.history=rep.history||[]; rep.history.push({action:'przejecie',by:currentUser,at:new Date().toISOString()}); rep.currentDriver=currentUser; rep.lastEditedAt=new Date().toISOString(); currentReport=rep; (rep.sectionE||[]).forEach(s=>{ if(s.station) stationsSet.add(s.station); }); populateStationsDatalist(Array.from(stationsSet)); await saveReport(currentReport); openReportUI(); };
+  // Actions
+  window.createNewReport=async ({name,id}) => {
+    currentUser={name,id}; const c=await nextCounter(); const d=new Date(); const {DD,MM,YY}=formatDateForNumber(d); const XXX=String(c).padStart(3,'0'); const number=`${XXX}/${DD}/${MM}/${YY}`;
+    currentReport=createEmptyReport(number,currentUser); await saveReport(currentReport); openReportUI();
+  };
+  window.takeReportByNumber=async ({name,id}) => {
+    currentUser={name,id}; const num=prompt('Podaj numer raportu w formacie XXX/DD/MM/YY'); if(!num) return;
+    const rep=await getReport(num.trim()); if(!rep) return alert('Nie znaleziono raportu.');
+    rep.history=rep.history||[]; rep.history.push({action:'przejecie',by:currentUser,at:new Date().toISOString()}); rep.currentDriver=currentUser; rep.lastEditedAt=new Date().toISOString(); currentReport=rep;
+    (rep.sectionE||[]).forEach(s=>{ if(s.station) stationsSet.add(s.station); }); populateStationsDatalist(Array.from(stationsSet)); await saveReport(currentReport); openReportUI();
+  };
   window.importReportFromJson=async (text)=>{ try{ const rep=JSON.parse(text); if(!rep.number) throw new Error('Nieprawidłowy plik'); await saveReport(rep); alert('Raport zaimportowany. Przejmij go przez numer.'); }catch(err){ alert('Błąd importu: '+err.message); } };
 
+  // Start panel
   on(newReportBtn,'click',async()=>{ const name=qs('userName')?.value?.trim(); const id=qs('userId')?.value?.trim(); if(!name||!id) return alert('Podaj imię i nazwisko oraz numer służbowy.'); await window.createNewReport({name,id}); });
   on(takeReportBtn,'click',async()=>{ const name=qs('userName')?.value?.trim(); const id=qs('userId')?.value?.trim(); if(!name||!id) return alert('Podaj imię i nazwisko oraz numer służbowy.'); await window.takeReportByNumber({name,id}); });
   on(importBtnStart,'click',()=> importFileStart && importFileStart.click());
   on(importFileStart,'change',async(e)=>{ const f=e.target.files?.[0]; if(!f) return; const text=await f.text(); await window.importReportFromJson(text); });
 
+  // Open/close
   function openReportUI(){ startPanel.style.display='none'; reportPanel.style.display='block'; renderReport(); attachSectionHandlers(); }
   on(closeReportBtn,'click',()=>{ if(!confirm('Zamknąć widok raportu?')) return; currentReport=null; currentUser=null; reportPanel.style.display='none'; startPanel.style.display='block'; });
 
+  // Render (zabezpieczenie przed null)
   function renderReport(){
     if(!currentReport) return;
-    reportNumberEl.textContent=currentReport.number;
-    currentUserEl.textContent=`${currentReport.currentDriver.name} (${currentReport.currentDriver.id})`;
-    catEl.value=currentReport.sectionA.category||''; tractionEl.value=currentReport.sectionA.traction||''; trainNumberEl.value=currentReport.sectionA.trainNumber||''; routeEl.value=currentReport.sectionA.route||''; trainDateEl.value=currentReport.sectionA.date||'';
+    if (reportNumberEl) reportNumberEl.textContent = currentReport.number;
+    if (currentUserEl) currentUserEl.textContent = `${currentReport.currentDriver.name} (${currentReport.currentDriver.id})`;
+
+    catEl && (catEl.value=currentReport.sectionA.category||'');
+    tractionEl && (tractionEl.value=currentReport.sectionA.traction||'');
+    trainNumberEl && (trainNumberEl.value=currentReport.sectionA.trainNumber||'');
+    routeEl && (routeEl.value=currentReport.sectionA.route||'');
+    trainDateEl && (trainDateEl.value=currentReport.sectionA.date||'');
+
     renderList(tractionList,currentReport.sectionB,renderTractionRow);
     renderList(conductorList,currentReport.sectionC,renderConductorRow);
     renderList(ordersList,currentReport.sectionD,renderOrderRow);
@@ -62,10 +83,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   function renderList(container,arr,renderer){ if(!container) return; container.innerHTML=''; arr.forEach((it,idx)=> container.appendChild(renderer(it,idx))); }
 
+  // Add buttons
   on(addTractionBtn,'click',()=>{ if(!formTraction) return; formTraction.setAttribute('data-mode','add'); formTraction.setAttribute('data-index',''); formTraction.reset(); new bootstrap.Modal(qs('modalTraction')).show(); });
   on(addConductorBtn,'click',()=>{ if(!formConductor) return; formConductor.setAttribute('data-mode','add'); formConductor.setAttribute('data-index',''); formConductor.reset(); new bootstrap.Modal(qs('modalConductor')).show(); });
   on(addOrderBtn,'click',()=>{ if(!formOrder) return; formOrder.setAttribute('data-mode','add'); formOrder.setAttribute('data-index',''); formOrder.reset(); new bootstrap.Modal(qs('modalOrder')).show(); });
-  on(addStationBtn,'click',()=>{ if(!formStation) return; const fallback=trainDateEl.value||currentReport?.sectionA?.date||''; formStation.setAttribute('data-mode','add'); formStation.setAttribute('data-index',''); formStation.reset(); qs('s_dateArr').value=fallback; qs('s_dateDep').value=fallback; qs('s_dateArrReal').value=fallback; qs('s_dateDepReal').value=fallback; new bootstrap.Modal(qs('modalStation')).show(); });
+  on(addStationBtn,'click',()=>{ if(!formStation) return; const fallback=trainDateEl?.value||currentReport?.sectionA?.date||''; formStation.setAttribute('data-mode','add'); formStation.setAttribute('data-index',''); formStation.reset(); qs('s_dateArr').value=fallback; qs('s_dateDep').value=fallback; qs('s_dateArrReal').value=fallback; qs('s_dateDepReal').value=fallback; new bootstrap.Modal(qs('modalStation')).show(); });
   on(addControlBtn,'click',()=>{ if(!formControl) return; formControl.setAttribute('data-mode','add'); formControl.setAttribute('data-index',''); formControl.reset(); new bootstrap.Modal(qs('modalControl')).show(); });
   on(addNoteBtn,'click',()=>{ if(!formNote) return; formNote.setAttribute('data-mode','add'); formNote.setAttribute('data-index',''); formNote.reset(); new bootstrap.Modal(qs('modalNote')).show(); });
 
@@ -162,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if(!station) return alert('Nazwa stacji jest wymagana.');
     if(!isValidTime(planArr)||!isValidTime(planDep)||!isValidTime(realArr)||!isValidTime(realDep)) return alert('Czas HH:MM lub puste.');
 
-    const fallback=trainDateEl.value||currentReport.sectionA.date||'';
+    const fallback=trainDateEl?.value||currentReport.sectionA.date||'';
     const planArrDT=parseDateTime(dateArrPlan,planArr,fallback);
     const realArrDT=parseDateTime(dateArrReal,realArr,fallback);
     const planDepDT=parseDateTime(dateDepPlan,planDep,fallback);
@@ -217,7 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
     await saveAndRender(); formNote.reset(); closeModalSafe('modalNote');
   }catch(err){ console.error(err); alert('Błąd zapisu: '+(err.message||err)); closeModalSafe('modalNote'); } });
 
-  /* ---------- Edit modal helper ---------- */
+  // Edit modal helper
   function openEditModal(type,idx){
     if(!currentReport) return;
     if(type==='traction'){ const it=currentReport.sectionB[idx];
@@ -245,20 +267,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Reset modali + safety odblokowanie przewijania
   document.querySelectorAll('.modal').forEach(m=>{ m.addEventListener('hidden.bs.modal',()=>{ const form=m.querySelector('form'); if(form){ form.setAttribute('data-mode','add'); form.setAttribute('data-index',''); form.reset(); } }); });
   document.addEventListener('shown.bs.modal',()=>{ document.body.style.overflow=''; document.body.style.position=''; document.documentElement.style.overflow=''; });
   document.addEventListener('hidden.bs.modal',()=>{ document.querySelectorAll('.modal-backdrop').forEach(b=>b.remove()); document.body.classList.remove('modal-open'); document.body.style.overflow=''; document.body.style.position=''; document.documentElement.style.overflow=''; });
 
+  // Save & autosave
   async function saveAndRender(){ if(!currentReport) return; currentReport.lastEditedAt=new Date().toISOString();
-    currentReport.sectionA={ category:catEl.value, traction:tractionEl.value, trainNumber:trainNumberEl.value, route:routeEl.value, date:trainDateEl.value };
+    currentReport.sectionA={ category:catEl?.value||'', traction:tractionEl?.value||'', trainNumber:trainNumberEl?.value||'', route:routeEl?.value||'', date:trainDateEl?.value||'' };
     await saveReport(currentReport); renderReport();
   }
   function attachSectionHandlers(){ [catEl,tractionEl,trainNumberEl,routeEl,trainDateEl].forEach(el=>{ if(!el) return; el.addEventListener('change',saveAndRender); el.addEventListener('input',saveAndRender); }); }
 
+  // Export / Import JSON
   on(exportJsonBtn,'click',()=>{ if(!currentReport) return alert('Brak otwartego raportu.'); const dataStr=JSON.stringify(currentReport,null,2); const blob=new Blob([dataStr],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`${currentReport.number.replace(/\//g,'-')}.json`; a.click(); URL.revokeObjectURL(url); });
   on(importBtn,'click',()=> importFile && importFile.click());
   on(importFile,'change',async(e)=>{ const f=e.target.files?.[0]; if(!f) return; const text=await f.text(); try{ const rep=JSON.parse(text); if(!rep.number) throw new Error('Nieprawidłowy plik'); currentReport=rep; (rep.sectionE||[]).forEach(s=>{ if(s.station) stationsSet.add(s.station); }); populateStationsDatalist(Array.from(stationsSet)); await saveReport(currentReport); renderReport(); alert('Raport zaimportowany i zapisany lokalnie.'); }catch(err){ alert('Błąd importu: '+err.message); } });
 
+  // PDF
   on(previewPdfBtn,'click',async()=>{ if(!currentReport) return alert('Brak otwartego raportu.');
     const container=document.createElement('div'); container.className='print-container';
     const header=document.createElement('div'); header.className='print-header';
@@ -352,5 +378,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const filename=`${currentReport.number.replace(/\//g,'-')}.pdf`; await exportPdf(container, filename);
   });
 
+  // Init
   startPanel.style.display='block'; reportPanel.style.display='none';
 });
