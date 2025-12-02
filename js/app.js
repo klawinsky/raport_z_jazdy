@@ -13,7 +13,33 @@ function isValidTime(t){ if(!t) return true; return /^([01]\d|2[0-3]):[0-5]\d$/.
 function parseDateTime(dateStr, timeStr, fallbackDate){ if(!timeStr) return null; const useDate=dateStr||fallbackDate; if(!useDate) return null; const [yyyy,mm,dd]=useDate.split('-').map(Number); const [hh,mi]=timeStr.split(':').map(Number); return new Date(yyyy,mm-1,dd,hh,mi).getTime(); }
 function formatDelayClass(v){ if(v==null) return 'delay-zero'; if(v>0) return 'delay-pos'; if(v<0) return 'delay-neg'; return 'delay-zero'; }
 function formatDelayText(v){ if(v==null) return '-'; return `${v} min`; }
-function closeModalSafe(modalId){ try{ const el=qs(modalId); if(el){ const inst=bootstrap.Modal.getInstance(el); if(inst){ try{inst.hide();}catch(e){} } else { try{ new bootstrap.Modal(el).hide(); }catch(e){} } el.setAttribute('aria-hidden','true'); } } finally { document.querySelectorAll('.modal-backdrop').forEach(b=>b.remove()); document.body.classList.remove('modal-open'); document.body.style.overflow=''; document.body.style.position=''; document.documentElement.style.overflow=''; } }
+
+/* Odblokowanie UI (usuwa pozostałe backdropy itp.) */
+function clearUiLocks() {
+  try {
+    document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.documentElement.style.overflow = '';
+  } catch (e) {
+    console.warn('clearUiLocks warn:', e);
+  }
+}
+
+/* Bezpieczne zamykanie modala + odblokowanie UI */
+function closeModalSafe(modalId){
+  try{
+    const el=qs(modalId);
+    if(el){
+      const inst=bootstrap.Modal.getInstance(el);
+      if(inst){ try{inst.hide();}catch(e){} } else { try{ new bootstrap.Modal(el).hide(); }catch(e){} }
+      el.setAttribute('aria-hidden','true');
+    }
+  } finally {
+    clearUiLocks();
+  }
+}
 
 /* ---------- Stations ---------- */
 const sampleStations=['Kraków Główny','Warszawa Centralna','Gdańsk Główny','Poznań Główny','Wrocław Główny','Katowice','Łódź Fabryczna','Sopot','Gdynia Główna','Warszawa Wschodnia'];
@@ -59,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
   on(importFileStart,'change',async(e)=>{ const f=e.target.files?.[0]; if(!f) return; const text=await f.text(); await window.importReportFromJson(text); });
 
   // Open/close
-  function openReportUI(){ startPanel.style.display='none'; reportPanel.style.display='block'; renderReport(); attachSectionHandlers(); }
+  function openReportUI(){ startPanel.style.display='none'; reportPanel.style.display='block'; renderReport(); attachSectionHandlers(); attachReportPanelDelegation(); }
   on(closeReportBtn,'click',()=>{ if(!confirm('Zamknąć widok raportu?')) return; currentReport=null; currentUser=null; reportPanel.style.display='none'; startPanel.style.display='block'; });
 
   // Render (zabezpieczenie przed null)
@@ -83,13 +109,71 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   function renderList(container,arr,renderer){ if(!container) return; container.innerHTML=''; arr.forEach((it,idx)=> container.appendChild(renderer(it,idx))); }
 
-  // Add buttons
-  on(addTractionBtn,'click',()=>{ if(!formTraction) return; formTraction.setAttribute('data-mode','add'); formTraction.setAttribute('data-index',''); formTraction.reset(); new bootstrap.Modal(qs('modalTraction')).show(); });
-  on(addConductorBtn,'click',()=>{ if(!formConductor) return; formConductor.setAttribute('data-mode','add'); formConductor.setAttribute('data-index',''); formConductor.reset(); new bootstrap.Modal(qs('modalConductor')).show(); });
-  on(addOrderBtn,'click',()=>{ if(!formOrder) return; formOrder.setAttribute('data-mode','add'); formOrder.setAttribute('data-index',''); formOrder.reset(); new bootstrap.Modal(qs('modalOrder')).show(); });
-  on(addStationBtn,'click',()=>{ if(!formStation) return; const fallback=trainDateEl?.value||currentReport?.sectionA?.date||''; formStation.setAttribute('data-mode','add'); formStation.setAttribute('data-index',''); formStation.reset(); qs('s_dateArr').value=fallback; qs('s_dateDep').value=fallback; qs('s_dateArrReal').value=fallback; qs('s_dateDepReal').value=fallback; new bootstrap.Modal(qs('modalStation')).show(); });
-  on(addControlBtn,'click',()=>{ if(!formControl) return; formControl.setAttribute('data-mode','add'); formControl.setAttribute('data-index',''); formControl.reset(); new bootstrap.Modal(qs('modalControl')).show(); });
-  on(addNoteBtn,'click',()=>{ if(!formNote) return; formNote.setAttribute('data-mode','add'); formNote.setAttribute('data-index',''); formNote.reset(); new bootstrap.Modal(qs('modalNote')).show(); });
+  // Add buttons (bezpośrednie handlery + czyszczenie blokad)
+  on(addTractionBtn,'click',()=>{ if(!formTraction) return; clearUiLocks(); formTraction.setAttribute('data-mode','add'); formTraction.setAttribute('data-index',''); formTraction.reset(); new bootstrap.Modal(qs('modalTraction')).show(); });
+  on(addConductorBtn,'click',()=>{ if(!formConductor) return; clearUiLocks(); formConductor.setAttribute('data-mode','add'); formConductor.setAttribute('data-index',''); formConductor.reset(); new bootstrap.Modal(qs('modalConductor')).show(); });
+  on(addOrderBtn,'click',()=>{ if(!formOrder) return; clearUiLocks(); formOrder.setAttribute('data-mode','add'); formOrder.setAttribute('data-index',''); formOrder.reset(); new bootstrap.Modal(qs('modalOrder')).show(); });
+  on(addStationBtn,'click',()=>{ if(!formStation) return; clearUiLocks(); const fallback=trainDateEl?.value||currentReport?.sectionA?.date||''; formStation.setAttribute('data-mode','add'); formStation.setAttribute('data-index',''); formStation.reset(); qs('s_dateArr').value=fallback; qs('s_dateDep').value=fallback; qs('s_dateArrReal').value=fallback; qs('s_dateDepReal').value=fallback; new bootstrap.Modal(qs('modalStation')).show(); });
+  on(addControlBtn,'click',()=>{ if(!formControl) return; clearUiLocks(); formControl.setAttribute('data-mode','add'); formControl.setAttribute('data-index',''); formControl.reset(); new bootstrap.Modal(qs('modalControl')).show(); });
+  on(addNoteBtn,'click',()=>{ if(!formNote) return; clearUiLocks(); formNote.setAttribute('data-mode','add'); formNote.setAttribute('data-index',''); formNote.reset(); new bootstrap.Modal(qs('modalNote')).show(); });
+
+  /* Delegacja kliknięć w panelu raportu (odporna na blokady/backdrop) */
+  function attachReportPanelDelegation() {
+    const panel = document.getElementById('reportPanel');
+    if (!panel || panel._delegationAttached) return;
+    panel.addEventListener('click', (e) => {
+      const t = e.target;
+      clearUiLocks(); // zawsze odblokuj UI przy kliknięciu w panel
+
+      if (t.closest('#addTractionBtn')) {
+        e.preventDefault();
+        new bootstrap.Modal(document.getElementById('modalTraction')).show();
+      } else if (t.closest('#addConductorBtn')) {
+        e.preventDefault();
+        new bootstrap.Modal(document.getElementById('modalConductor')).show();
+      } else if (t.closest('#addOrderBtn')) {
+        e.preventDefault();
+        new bootstrap.Modal(document.getElementById('modalOrder')).show();
+      } else if (t.closest('#addStationBtn')) {
+        e.preventDefault();
+        const fallback = document.getElementById('trainDate')?.value || (currentReport?.sectionA?.date || '');
+        ['s_dateArr','s_dateDep','s_dateArrReal','s_dateDepReal'].forEach(id => { const el = document.getElementById(id); if (el && !el.value) el.value = fallback; });
+        new bootstrap.Modal(document.getElementById('modalStation')).show();
+      } else if (t.closest('#addControlBtn')) {
+        e.preventDefault();
+        new bootstrap.Modal(document.getElementById('modalControl')).show();
+      } else if (t.closest('#addNoteBtn')) {
+        e.preventDefault();
+        new bootstrap.Modal(document.getElementById('modalNote')).show();
+      } else if (t.closest('#exportJson')) {
+        e.preventDefault();
+        if (!currentReport) return alert('Brak otwartego raportu.');
+        const dataStr = JSON.stringify(currentReport, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${currentReport.number.replace(/\//g,'-')}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else if (t.closest('#importBtn')) {
+        e.preventDefault();
+        document.getElementById('importFile')?.click();
+      } else if (t.closest('#previewPdf')) {
+        e.preventDefault();
+        doPreviewPdf();
+      } else if (t.closest('#closeReport')) {
+        e.preventDefault();
+        const ok = confirm('Zamknąć widok raportu?');
+        if (!ok) return;
+        currentReport = null;
+        currentUser = null;
+        document.getElementById('reportPanel').style.display = 'none';
+        document.getElementById('startPanel').style.display = 'block';
+      }
+    });
+    panel._delegationAttached = true;
+  }
 
   /* ---------- Sekcja B ---------- */
   function renderTractionRow(item,idx){
@@ -244,13 +328,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if(!currentReport) return;
     if(type==='traction'){ const it=currentReport.sectionB[idx];
       qs('t_name').value=it.name||''; qs('t_id').value=it.id||''; qs('t_zdp').value=it.zdp||'WAW'; qs('t_loco').value=it.loco||''; qs('t_from').value=it.from||''; qs('t_to').value=it.to||'';
-      formTraction.setAttribute('data-mode','edit'); formTraction.setAttribute('data-index',idx); new bootstrap.Modal(qs('modalTraction')).show();
+      formTraction.setAttribute('data-mode','edit'); formTraction.setAttribute('data-index',idx); clearUiLocks(); new bootstrap.Modal(qs('modalTraction')).show();
     } else if(type==='conductor'){ const it=currentReport.sectionC[idx];
       qs('c_name').value=it.name||''; qs('c_id').value=it.id||''; qs('c_zdp').value=it.zdp||'WAW'; qs('c_role').value=it.role||'KP'; qs('c_from').value=it.from||''; qs('c_to').value=it.to||'';
-      formConductor.setAttribute('data-mode','edit'); formConductor.setAttribute('data-index',idx); new bootstrap.Modal(qs('modalConductor')).show();
+      formConductor.setAttribute('data-mode','edit'); formConductor.setAttribute('data-index',idx); clearUiLocks(); new bootstrap.Modal(qs('modalConductor')).show();
     } else if(type==='order'){ const it=currentReport.sectionD[idx];
       qs('o_number').value=it.number||''; qs('o_time').value=it.time||''; qs('o_text').value=it.text||''; qs('o_source').value=it.source||'Dyspozytura';
-      formOrder.setAttribute('data-mode','edit'); formOrder.setAttribute('data-index',idx); new bootstrap.Modal(qs('modalOrder')).show();
+      formOrder.setAttribute('data-mode','edit'); formOrder.setAttribute('data-index',idx); clearUiLocks(); new bootstrap.Modal(qs('modalOrder')).show();
     } else if(type==='station'){ const it=currentReport.sectionE[idx];
       qs('s_station').value=it.station||'';
       qs('s_dateArr').value=it.dateArr||''; qs('s_planArr').value=it.planArr||'';
@@ -258,19 +342,19 @@ document.addEventListener('DOMContentLoaded', () => {
       qs('s_dateDep').value=it.dateDep||''; qs('s_planDep').value=it.planDep||'';
       qs('s_dateDepReal').value=it.dateDepReal||''; qs('s_realDep').value=it.realDep||'';
       qs('s_delayReason').value=it.delayReason||''; qs('s_writtenOrders').value=it.writtenOrders||'';
-      formStation.setAttribute('data-mode','edit'); formStation.setAttribute('data-index',idx); new bootstrap.Modal(qs('modalStation')).show();
+      formStation.setAttribute('data-mode','edit'); formStation.setAttribute('data-index',idx); clearUiLocks(); new bootstrap.Modal(qs('modalStation')).show();
     } else if(type==='control'){ const it=currentReport.sectionF[idx];
       qs('f_by').value=it.by||''; qs('f_id').value=it.id||''; qs('f_desc').value=it.desc||''; qs('f_notes').value=it.notes||'';
-      formControl.setAttribute('data-mode','edit'); formControl.setAttribute('data-index',idx); new bootstrap.Modal(qs('modalControl')).show();
+      formControl.setAttribute('data-mode','edit'); formControl.setAttribute('data-index',idx); clearUiLocks(); new bootstrap.Modal(qs('modalControl')).show();
     } else if(type==='note'){ const it=currentReport.sectionG[idx];
-      qs('n_text').value=it.text||''; formNote.setAttribute('data-mode','edit'); formNote.setAttribute('data-index',idx); new bootstrap.Modal(qs('modalNote')).show();
+      qs('n_text').value=it.text||''; formNote.setAttribute('data-mode','edit'); formNote.setAttribute('data-index',idx); clearUiLocks(); new bootstrap.Modal(qs('modalNote')).show();
     }
   }
 
   // Reset modali + safety odblokowanie przewijania
-  document.querySelectorAll('.modal').forEach(m=>{ m.addEventListener('hidden.bs.modal',()=>{ const form=m.querySelector('form'); if(form){ form.setAttribute('data-mode','add'); form.setAttribute('data-index',''); form.reset(); } }); });
+  document.querySelectorAll('.modal').forEach(m=>{ m.addEventListener('hidden.bs.modal',()=>{ const form=m.querySelector('form'); if(form){ form.setAttribute('data-mode','add'); form.setAttribute('data-index',''); form.reset(); } clearUiLocks(); }); });
   document.addEventListener('shown.bs.modal',()=>{ document.body.style.overflow=''; document.body.style.position=''; document.documentElement.style.overflow=''; });
-  document.addEventListener('hidden.bs.modal',()=>{ document.querySelectorAll('.modal-backdrop').forEach(b=>b.remove()); document.body.classList.remove('modal-open'); document.body.style.overflow=''; document.body.style.position=''; document.documentElement.style.overflow=''; });
+  document.addEventListener('hidden.bs.modal',()=>{ clearUiLocks(); });
 
   // Save & autosave
   async function saveAndRender(){ if(!currentReport) return; currentReport.lastEditedAt=new Date().toISOString();
@@ -279,13 +363,14 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   function attachSectionHandlers(){ [catEl,tractionEl,trainNumberEl,routeEl,trainDateEl].forEach(el=>{ if(!el) return; el.addEventListener('change',saveAndRender); el.addEventListener('input',saveAndRender); }); }
 
-  // Export / Import JSON
+  // Import/Export
   on(exportJsonBtn,'click',()=>{ if(!currentReport) return alert('Brak otwartego raportu.'); const dataStr=JSON.stringify(currentReport,null,2); const blob=new Blob([dataStr],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`${currentReport.number.replace(/\//g,'-')}.json`; a.click(); URL.revokeObjectURL(url); });
   on(importBtn,'click',()=> importFile && importFile.click());
   on(importFile,'change',async(e)=>{ const f=e.target.files?.[0]; if(!f) return; const text=await f.text(); try{ const rep=JSON.parse(text); if(!rep.number) throw new Error('Nieprawidłowy plik'); currentReport=rep; (rep.sectionE||[]).forEach(s=>{ if(s.station) stationsSet.add(s.station); }); populateStationsDatalist(Array.from(stationsSet)); await saveReport(currentReport); renderReport(); alert('Raport zaimportowany i zapisany lokalnie.'); }catch(err){ alert('Błąd importu: '+err.message); } });
 
-  // PDF
-  on(previewPdfBtn,'click',async()=>{ if(!currentReport) return alert('Brak otwartego raportu.');
+  // PDF: wspólna funkcja i handler/Delegacja
+  async function doPreviewPdf() {
+    if (!currentReport) return alert('Brak otwartego raportu.');
     const container=document.createElement('div'); container.className='print-container';
     const header=document.createElement('div'); header.className='print-header';
     header.innerHTML=`<div class="print-title">Raport z jazdy pociągu</div><div class="print-meta">Numer: ${currentReport.number} · Prowadzący: ${currentReport.currentDriver.name} (${currentReport.currentDriver.id})</div><div class="print-meta">Wygenerowano dnia ${nowDateString()}</div>`;
@@ -375,8 +460,11 @@ document.addEventListener('DOMContentLoaded', () => {
     container.appendChild(secG);
 
     const footer=document.createElement('div'); footer.className='print-footer'; footer.textContent=`Wygenerowano dnia ${nowDateString()} z systemu ERJ`; container.appendChild(footer);
-    const filename=`${currentReport.number.replace(/\//g,'-')}.pdf`; await exportPdf(container, filename);
-  });
+    const filename=`${currentReport.number.replace(/\//g,'-')}.pdf`;
+    await exportPdf(container, filename);
+  }
+
+  on(previewPdfBtn,'click', async () => { await doPreviewPdf(); });
 
   // Init
   startPanel.style.display='block'; reportPanel.style.display='none';
