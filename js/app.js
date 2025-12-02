@@ -2,19 +2,7 @@
 import { listUsers, getUserByEmailOrId, updateUser, deleteUser, saveReport, nextCounter, getReport } from './db.js';
 import { initAuth, registerUser, login, logout, currentUser, hashPassword } from './auth.js';
 
-function debugShow(msg) {
-  try {
-    const el = document.getElementById('debugLog');
-    if (!el) return;
-    el.style.display = 'block';
-    el.textContent = msg;
-    clearTimeout(el._t);
-    el._t = setTimeout(()=>{ el.style.display='none'; }, 2500);
-  } catch(e){}
-}
-
 document.addEventListener('DOMContentLoaded', async () => {
-  // Seed admin and get demo password
   const adminPlain = await initAuth();
 
   // UI refs
@@ -48,7 +36,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   const currentUserEl = document.getElementById('currentUser');
   const closeReportBtn = document.getElementById('closeReport');
 
-  // Ensure initial visibility: show login unless session exists
+  // lists and modals for sections (basic placeholders)
+  const tractionList = document.getElementById('tractionList');
+  const conductorList = document.getElementById('conductorList');
+  const ordersList = document.getElementById('ordersList');
+  const stationsList = document.getElementById('stationsList');
+  const controlsList = document.getElementById('controlsList');
+  const notesList = document.getElementById('notesList');
+
+  // visibility helpers
   function showLoginView() {
     loginView.style.display = 'block';
     appShell.style.display = 'none';
@@ -60,49 +56,49 @@ document.addEventListener('DOMContentLoaded', async () => {
     loggedUserInfo.textContent = `${user.name} (${user.id}) · ${user.role}`;
     if (user.role === 'admin') adminPanel.style.display = 'block';
     else adminPanel.style.display = 'none';
-    // prefill start panel inputs
     userNameInput.value = user.name || '';
     userIdInput.value = user.id || '';
-    refreshUsersTable();
+    awaitRefreshUsersTable();
   }
 
-  // If session exists, show app; otherwise show login
+  // session check
   const sess = currentUser();
-  if (sess) showAppFor(sess);
-  else showLoginView();
+  if (sess) {
+    showAppFor(sess);
+  } else {
+    showLoginView();
+  }
 
-  // Helpers
-  function showLoginError(msg) { loginMsg.textContent = msg || ''; }
-  function showUserFormError(msg) { userFormMsg.textContent = msg || ''; }
-
-  // Login submit
+  // login
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    showLoginError('');
+    loginMsg.textContent = '';
     const id = loginId.value.trim();
     const pw = loginPassword.value;
-    if (!id || !pw) return showLoginError('Podaj login i hasło.');
+    if (!id || !pw) return loginMsg.textContent = 'Podaj login i hasło.';
     const res = await login(id, pw);
-    if (!res.ok) return showLoginError(res.reason || 'Błąd logowania');
+    if (!res.ok) return loginMsg.textContent = res.reason || 'Błąd logowania';
     showAppFor(res.user);
   });
 
-  // Demo button
   demoBtn.addEventListener('click', () => {
     loginId.value = 'klawinski.pawel@gmail.com';
     loginPassword.value = adminPlain;
     loginForm.dispatchEvent(new Event('submit', { cancelable: true }));
   });
 
-  // Logout
   btnLogout.addEventListener('click', () => {
     logout();
     showLoginView();
     loginId.value = ''; loginPassword.value = '';
-    showLoginError('');
+    loginMsg.textContent = '';
   });
 
-  // Admin: refresh users table
+  // users table
+  async function awaitRefreshUsersTable() {
+    // small wrapper to avoid hoisting issues
+    await refreshUsersTable();
+  }
   async function refreshUsersTable() {
     if (!usersTableBody) return;
     usersTableBody.innerHTML = '';
@@ -123,10 +119,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Add / Edit user modal submit
+  // user form submit
   formUser.addEventListener('submit', async (e) => {
     e.preventDefault();
-    showUserFormError('');
+    userFormMsg.textContent = '';
     const mode = formUser.getAttribute('data-mode') || 'add';
     const idx = formUser.getAttribute('data-index') || '';
     const name = document.getElementById('u_name').value.trim();
@@ -136,7 +132,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const password = document.getElementById('u_password').value;
     const role = document.getElementById('u_role').value;
     const status = document.getElementById('u_status').value;
-    if (!name || !id || !email || !password) return showUserFormError('Wypełnij wszystkie wymagane pola.');
+    if (!name || !id || !email || !password) return userFormMsg.textContent = 'Wypełnij wszystkie wymagane pola.';
     try {
       if (mode === 'add') {
         await registerUser({ name, id, zdp, email, password, role, status });
@@ -150,11 +146,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       formUser.reset();
       await refreshUsersTable();
     } catch (err) {
-      showUserFormError(err.message || 'Błąd zapisu użytkownika');
+      userFormMsg.textContent = err.message || 'Błąd zapisu użytkownika';
     }
   });
 
-  // Delegacja akcji w users table
+  // users table delegation
   usersTableBody.addEventListener('click', async (e) => {
     const btn = e.target.closest('button');
     if (!btn) return;
@@ -185,21 +181,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Open add user modal (clear form)
-  addUserBtn.addEventListener('click', () => {
-    formUser.setAttribute('data-mode','add');
-    formUser.setAttribute('data-index','');
-    formUser.reset();
-    document.querySelector('#modalUser .modal-title').textContent = 'Dodaj użytkownika';
-    showUserFormError('');
-  });
-
-  // Open admin panel button from start panel
-  openAdminBtn.addEventListener('click', async () => {
-    const u = currentUser();
-    if (!u || u.role !== 'admin') return alert('Brak uprawnień. Panel administracyjny dostępny tylko dla administratora.');
-    adminPanel.scrollIntoView({ behavior: 'smooth' });
-    await refreshUsersTable();
+  // open admin panel
+  document.body.addEventListener('click', async (e) => {
+    const t = e.target;
+    if (t.closest && t.closest('#openAdminBtn')) {
+      e.preventDefault();
+      const u = currentUser();
+      if (!u || u.role !== 'admin') return alert('Brak uprawnień. Panel administracyjny dostępny tylko dla administratora.');
+      // hide report when opening admin
+      reportPanel.style.display = 'none';
+      startPanel.style.display = 'block';
+      adminPanel.style.display = 'block';
+      await refreshUsersTable();
+    }
   });
 
   // ----------------- Raporty: create / take -----------------
@@ -217,7 +211,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       number,
       createdAt: new Date().toISOString(),
       createdBy: { name, id },
-      sectionA: { date: d.toISOString().slice(0,10) },
+      sectionA: { category:'', traction:'', trainNumber:'', route:'', date: d.toISOString().slice(0,10) },
       sectionB: [], sectionC: [], sectionD: [], sectionE: [], sectionF: [], sectionG: []
     };
     await saveReport(report);
@@ -234,56 +228,81 @@ document.addEventListener('DOMContentLoaded', async () => {
     openReport(rep);
   }
 
+  function renderReportSections(report) {
+    // populate section A fields
+    try {
+      document.getElementById('cat').value = report.sectionA?.category || '';
+      document.getElementById('traction').value = report.sectionA?.traction || '';
+      document.getElementById('trainNumber').value = report.sectionA?.trainNumber || '';
+      document.getElementById('route').value = report.sectionA?.route || '';
+      document.getElementById('trainDate').value = report.sectionA?.date || '';
+    } catch (e) { console.warn(e); }
+    // render lists minimally (names only) so UI shows content
+    function renderList(container, arr, renderer) {
+      if (!container) return;
+      container.innerHTML = '';
+      (arr||[]).forEach((it, idx) => container.appendChild(renderer(it, idx)));
+    }
+    renderList(tractionList, report.sectionB || [], (it, idx) => {
+      const d = document.createElement('div'); d.className='small'; d.textContent = `${it.name || '-'} (${it.id||'-'})`; return d;
+    });
+    renderList(conductorList, report.sectionC || [], (it, idx) => {
+      const d = document.createElement('div'); d.className='small'; d.textContent = `${it.name || '-'} (${it.id||'-'})`; return d;
+    });
+    renderList(ordersList, report.sectionD || [], (it, idx) => {
+      const d = document.createElement('div'); d.className='small'; d.textContent = `${it.number||''} ${it.time||''} ${it.text||''}`; return d;
+    });
+    renderList(stationsList, report.sectionE || [], (it, idx) => {
+      const d = document.createElement('div'); d.className='small'; d.textContent = `${it.station||'-'} ${it.planArr||''}/${it.planDep||''}`; return d;
+    });
+    renderList(controlsList, report.sectionF || [], (it, idx) => {
+      const d = document.createElement('div'); d.className='small'; d.textContent = `${it.by||'-'} ${it.desc||''}`; return d;
+    });
+    renderList(notesList, report.sectionG || [], (it, idx) => {
+      const d = document.createElement('div'); d.className='small'; d.textContent = `${it.text||'-'}`; return d;
+    });
+  }
+
   function openReport(report) {
     if (!report) return;
-    reportPanel.style.display = 'block';
+    // hide admin panel when opening report
+    adminPanel.style.display = 'none';
     startPanel.style.display = 'none';
+    reportPanel.style.display = 'block';
     reportNumberEl.textContent = report.number || '-';
     currentUserEl.textContent = `${report.createdBy?.name || '-'} (${report.createdBy?.id || '-'})`;
+    renderReportSections(report);
     reportPanel.scrollIntoView({ behavior: 'smooth' });
-    debugShow('Otworzono raport: ' + (report.number || '-'));
   }
 
   closeReportBtn.addEventListener('click', () => {
     reportPanel.style.display = 'none';
     startPanel.style.display = 'block';
-    debugShow('Zamknięto raport');
+    // show admin panel again only if current user is admin
+    const u = currentUser();
+    if (u && u.role === 'admin') adminPanel.style.display = 'block';
   });
 
-  // --- KEY CHANGE: global delegation for start-panel buttons (robust) ---
+  // global delegation for start-panel buttons
   document.body.addEventListener('click', async (e) => {
     const t = e.target;
-    // new report
     if (t.closest && t.closest('#newReportBtn')) {
       e.preventDefault();
-      debugShow('Klik: Otwórz nowy raport');
       const name = (userNameInput && userNameInput.value.trim()) || (currentUser() && currentUser().name) || '';
       const id = (userIdInput && userIdInput.value.trim()) || (currentUser() && currentUser().id) || '';
       await createNewReport({ name, id });
       return;
     }
-    // take report
     if (t.closest && t.closest('#takeReportBtn')) {
       e.preventDefault();
-      debugShow('Klik: Przejmij raport');
       const name = (userNameInput && userNameInput.value.trim()) || (currentUser() && currentUser().name) || '';
       const id = (userIdInput && userIdInput.value.trim()) || (currentUser() && currentUser().id) || '';
       await takeReportByNumber({ name, id });
       return;
     }
-    // open admin
-    if (t.closest && t.closest('#openAdminBtn')) {
-      e.preventDefault();
-      debugShow('Klik: Panel administracyjny');
-      const u = currentUser();
-      if (!u || u.role !== 'admin') return alert('Brak uprawnień. Panel administracyjny dostępny tylko dla administratora.');
-      adminPanel.scrollIntoView({ behavior: 'smooth' });
-      await refreshUsersTable();
-      return;
-    }
   });
 
-  // Expose helper for other modules if needed
+  // expose helpers
   window.appAuth = { refreshUsersTable, currentUser: currentUser };
 
 });
