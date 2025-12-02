@@ -38,10 +38,6 @@
       <div class="card p-3">
         <div class="d-flex justify-content-between align-items-start">
           <h4 class="mb-0">Raport z jazdy pociągu</h4>
-          <div class="text-end">
-            <div><strong id="reportNumber" class="badge bg-secondary fs-6"></strong></div>
-            <div class="small text-muted" id="currentUser"></div>
-          </div>
         </div>
 
         <hr>
@@ -246,7 +242,7 @@
 
   <!-- Modal: Station (Sekcja E) -->
   <div class="modal fade" id="modalStation" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
       <form id="formStation" class="modal-content" data-mode="add" data-index="">
         <div class="modal-header">
           <h5 class="modal-title">Dodaj wpis stacji</h5>
@@ -257,19 +253,24 @@
             <input id="s_station" class="form-control" list="stationsDatalist" required>
             <datalist id="stationsDatalist"></datalist>
           </div>
+
           <div class="row g-2">
-            <div class="col"><label class="form-label">Data przyjazdu</label><input id="s_dateArr" type="date" class="form-control"></div>
-            <div class="col"><label class="form-label">Planowy przyjazd (HH:MM)</label><input id="s_planArr" class="form-control" placeholder="12:45"></div>
-            <div class="col"><label class="form-label">Realny przyjazd (HH:MM)</label><input id="s_realArr" class="form-control" placeholder="13:01"></div>
+            <div class="col-6 col-md-3"><label class="form-label">Data przyjazdu (plan)</label><input id="s_dateArr" type="date" class="form-control"></div>
+            <div class="col-6 col-md-3"><label class="form-label">Godz. przyjazdu (plan)</label><input id="s_planArr" class="form-control" placeholder="HH:MM"></div>
+            <div class="col-6 col-md-3"><label class="form-label">Data przyjazdu (real)</label><input id="s_dateArrReal" type="date" class="form-control"></div>
+            <div class="col-6 col-md-3"><label class="form-label">Godz. przyjazdu (real)</label><input id="s_realArr" class="form-control" placeholder="HH:MM"></div>
           </div>
+
           <div class="row g-2 mt-2">
-            <div class="col"><label class="form-label">Data odjazdu</label><input id="s_dateDep" type="date" class="form-control"></div>
-            <div class="col"><label class="form-label">Planowy odjazd (HH:MM)</label><input id="s_planDep" class="form-control" placeholder="12:55"></div>
-            <div class="col"><label class="form-label">Realny odjazd (HH:MM)</label><input id="s_realDep" class="form-control" placeholder="13:05"></div>
+            <div class="col-6 col-md-3"><label class="form-label">Data odjazdu (plan)</label><input id="s_dateDep" type="date" class="form-control"></div>
+            <div class="col-6 col-md-3"><label class="form-label">Godz. odjazdu (plan)</label><input id="s_planDep" class="form-control" placeholder="HH:MM"></div>
+            <div class="col-6 col-md-3"><label class="form-label">Data odjazdu (real)</label><input id="s_dateDepReal" type="date" class="form-control"></div>
+            <div class="col-6 col-md-3"><label class="form-label">Godz. odjazdu (real)</label><input id="s_realDep" class="form-control" placeholder="HH:MM"></div>
           </div>
+
           <div class="mb-2 mt-2"><label class="form-label">Powód opóźnienia</label><input id="s_delayReason" class="form-control"></div>
           <div class="mb-2"><label class="form-label">Rozkazy pisemne</label><input id="s_writtenOrders" class="form-control"></div>
-          <div class="small text-muted mt-1">Czas musi być w formacie HH:MM (np. 09:05). Puste pola są dozwolone.</div>
+          <div class="small text-muted mt-1">Czas musi być w formacie HH:MM (np. 09:05). Puste pola są dozwolone. Daty realne pozwalają liczyć odchylenia na przełomie doby.</div>
         </div>
         <div class="modal-footer">
           <button type="submit" class="btn btn-primary">Zapisz</button>
