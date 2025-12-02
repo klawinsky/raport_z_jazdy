@@ -5,3 +5,4 @@ body { background:#f7f7f9; color:#222; font-family: Inter, system-ui, -apple-sys
 .table-print th, .table-print td { border:1px solid #ddd; padding:6px 8px; font-size:11px; text-align:center; vertical-align:middle; word-wrap:break-word; }
 .table-print th { background:#f0f0f0; font-weight:600; }
 .small.text-muted { color:#6c757d; }
+.station-row { padding:6px 0; border-bottom:1px dashed #eee; }
