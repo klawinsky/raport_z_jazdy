@@ -1,7 +1,4 @@
 // js/db.js
-// Proste API oparte na localStorage: saveReport, getReport, nextCounter
-// + user management: saveUser, getUserByEmailOrId, listUsers, updateUser, deleteUser
-
 const STORAGE_KEY_PREFIX = 'erj_report_';
 const COUNTER_KEY = 'erj_counter';
 const USERS_KEY = 'erj_users';
@@ -26,7 +23,7 @@ export async function nextCounter() {
   return n;
 }
 
-/* ---------- Users API (localStorage) ---------- */
+/* Users API */
 function _readUsers() {
   const raw = localStorage.getItem(USERS_KEY);
   if (!raw) return [];
@@ -74,7 +71,6 @@ export async function deleteUser(emailOrId) {
   return true;
 }
 
-/* ---------- Seed admin (idempotent) ---------- */
 export async function seedAdminIfMissing(admin) {
   if (!admin || !admin.email) return;
   const existing = await getUserByEmailOrId(admin.email);
